@@ -97,6 +97,7 @@ final class SettingsView {
         CheckBox tray = toggle(app, "tray", true, () -> {});
         tray.setDisable(!app.tray.available());
         library.getChildren().addAll(
+                line(app.i18n.t("settings.offline"),toggle(app,"offline",false,()->{NetworkPolicy.offline(app.flag("offline",false));app.art.retry();})),
                 line(app.i18n.t("settings.scanOnStart"), toggle(app, "scanOnStart", true, () -> {})),
                 line(app.i18n.t("settings.tray"), tray),
                 line(app.i18n.t("settings.steamArtwork"), button(app.i18n.t("settings.retryArtwork"), "refresh", "quiet", () -> {
@@ -171,6 +172,14 @@ final class SettingsView {
                 button(app.i18n.t("settings.exportGames"), null, "quiet", () -> export(app, "games")),
                 button(app.i18n.t("settings.exportHistory"), null, "quiet", () -> export(app, "sessions"))
         );
+        exports.getChildren().add(button(app.i18n.t("settings.restore"),"folder","quiet",()->{
+            FileChooser chooser=new FileChooser();var source=chooser.showOpenDialog(app.stage);if(source==null)return;
+            if(app.actions.alert(Alert.AlertType.CONFIRMATION,app.i18n.t("settings.restore"),app.i18n.t("settings.restoreConfirm"))
+                    .showAndWait().orElse(ButtonType.CANCEL)!=ButtonType.OK)return;
+            app.work(()->{var safety=app.tracker.restore(source.toPath());javafx.application.Platform.runLater(()->{
+                NetworkPolicy.offline(app.flag("offline",false));app.art.retry();app.applyTheme();app.navigate("Todos os jogos");app.message(safety.toString());
+            });});
+        }));
         data.getChildren().add(exports);
 
         VBox catalog = panel(app.i18n.t("settings.steamGridDb"));

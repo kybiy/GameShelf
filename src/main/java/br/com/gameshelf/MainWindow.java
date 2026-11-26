@@ -71,11 +71,14 @@ public final class MainWindow {
     private String lastScanError;
     private ReleaseInfo availableUpdate;
 
+    private final Path showRequest;
     MainWindow(Stage stage, Library library, Path data) {
+        showRequest=data.resolve("show-window.request");
         this.stage = stage;
         this.library = library;
         this.i18n = new LocalizationService(LanguagePreference.fromCode(library.setting("language", "system")));
         this.tracker = new Playtime(library);
+        NetworkPolicy.offline(Boolean.parseBoolean(library.setting("offline","false")));
         this.art = new Artwork(data);
         this.art.limit(Integer.parseInt(library.setting("cacheMb", "256")));
         this.logger = new AppLogger(data);
@@ -129,6 +132,8 @@ public final class MainWindow {
             if (tray.available() && flag("tray", true)) stage.hide();
             else exit();
         });
+        stage.showingProperty().addListener((o,a,b)->art.background(!b||stage.isIconified()));
+        stage.iconifiedProperty().addListener((o,a,b)->art.background(b||!stage.isShowing()));
         stage.setOnShown(e -> Platform.runLater(this::themeCaption));
 
         applyTheme();
@@ -147,6 +152,7 @@ public final class MainWindow {
         stage.centerOnScreen();
         monitor.scheduleWithFixedDelay(() -> {
             try {
+                if(Files.deleteIfExists(showRequest))Platform.runLater(()->{stage.show();stage.setIconified(false);stage.toFront();});
                 tracker.poll();
                 Platform.runLater(() -> tick(true));
             } catch (Exception e) {
@@ -177,11 +183,16 @@ public final class MainWindow {
         save();
     }
 
+    private static double linear(double c){return c<=.04045?c/12.92:Math.pow((c+.055)/1.055,2.4);}
     void applyTheme() {
         root.getStyleClass().remove("light");
         if (flag("light", false)) root.getStyleClass().add("light");
         themeCaption();
-        root.setStyle("-shelf-accent: " + library.setting("accent", "#929cff") + ";");
+        String accent=library.setting("accent","#929cff");
+        if(!accent.matches("#[0-9a-fA-F]{6}"))accent="#929cff";
+        var c=javafx.scene.paint.Color.web(accent);
+        double y=.2126*linear(c.getRed())+.7152*linear(c.getGreen())+.0722*linear(c.getBlue());
+        root.setStyle("-shelf-accent: "+accent+"; -shelf-on-accent: "+(y>.179?"black":"white")+";");
     }
 
     void applyLanguage(LanguagePreference pref) {

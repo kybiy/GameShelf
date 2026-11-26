@@ -38,7 +38,7 @@ GameShelf only makes outbound HTTPS requests in the following cases:
 Diagnostic reports generated in the **Diagnostics** panel are **never** sent automatically to GitHub or any server. Export or copy is always manual after a sanitization preview (which removes Windows usernames, user profile paths, API keys, tokens, process arguments, and full game history).
 
 ### 5. API Key Storage
-Your optional SteamGridDB API key (`gridDbKey`) is stored locally in plain text inside the `setting` table of `%LOCALAPPDATA%\GameShelf\library.db`. If you export a SQLite backup via **Configurações → Dados locais**, the `setting` table (including `gridDbKey`) is included in that backup file.
+Windows DPAPI protects new keys for the current user. New SQLite exports exclude the credential. Old backups can still contain plaintext keys. Moving the database to another computer may require entering the key again.
 
 ### 6. How to Delete Your Data
 You have full control over your local data and can remove it at any time:
@@ -84,7 +84,7 @@ O GameShelf realiza conexões HTTPS externas somente nas seguintes situações:
 Os relatórios gerados no painel de **Diagnóstico** **nunca** são enviados automaticamente para o GitHub ou qualquer servidor. A cópia ou exportação é sempre manual após prévia sanitizada (que remove nomes de usuário do Windows, caminhos pessoais, chaves de API, tokens, argumentos de processo e o histórico completo de jogos).
 
 ### 5. Armazenamento de chaves de API
-Sua chave opcional do SteamGridDB (`gridDbKey`) é salva localmente em texto simples na tabela `setting` do arquivo `%LOCALAPPDATA%\GameShelf\library.db`. Caso você gere um backup SQLite manual em **Configurações → Dados locais**, a tabela `setting` (incluindo `gridDbKey`) também estará presente nesse arquivo de backup.
+O DPAPI do Windows protege a chave para o usuário atual. Novos backups SQLite excluem a credencial. Backups antigos podem conter a chave em texto simples. Ao trocar de computador, pode ser necessário cadastrar a chave novamente.
 
 ### 6. Como excluir seus dados
 Você pode remover seus dados locais a qualquer momento:

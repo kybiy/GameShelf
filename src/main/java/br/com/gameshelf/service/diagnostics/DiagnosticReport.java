@@ -117,6 +117,7 @@ public record DiagnosticReport(
 
         sb.append("=== Process Monitoring ===").append('\n');
         sb.append("Active         : ").append(processes.monitorActive()).append(" (interval=").append(processes.intervalSeconds()).append("s)\n");
+        sb.append("Mean scan (ms): ").append(processes.meanScanMillis()).append(", offline=").append(processes.offline()).append('\n');
         sb.append("Scanned procs  : ").append(processes.processesScanned()).append(", accessErrors=").append(processes.accessErrors()).append('\n');
         sb.append("Active games   : ").append(processes.monitoredGames().stream().filter(ProcessDiagnostics.MonitoredGameInfo::activeSession).count()).append('\n');
         sb.append("Conflicts      : ").append(processes.conflicts().size()).append('\n');

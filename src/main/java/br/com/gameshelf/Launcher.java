@@ -23,7 +23,10 @@ public final class Launcher {
         if (!game.installed()) throw new IOException(loc.t("launcher.err.notInstalled"));
         if (!game.launchUri().isBlank()) {
             URI uri = URI.create(game.launchUri());
-            if (!java.util.Set.of("steam", "com.epicgames.launcher", "https").contains(uri.getScheme()))
+            boolean known=game.id().matches("steam:[0-9]+") && game.launchUri().equals("steam://run/"+game.id().substring(6))
+                    || game.id().startsWith("epic:") && "com.epicgames.launcher".equals(uri.getScheme()) && "apps".equals(uri.getHost())
+                    || game.robloxPlayer() && game.launchUri().equals("https://www.roblox.com/games");
+            if (!known)
                 throw new IOException(loc.t("launcher.err.protocol"));
             if (!Desktop.isDesktopSupported() || !Desktop.getDesktop().isSupported(Desktop.Action.BROWSE))
                 throw new IOException(loc.t("launcher.err.noBrowse"));
@@ -43,6 +46,7 @@ public final class Launcher {
             Desktop.getDesktop().open(exe.toFile());
             return;
         }
+        if (!exe.toString().toLowerCase(java.util.Locale.ROOT).endsWith(".exe"))throw new IOException(loc.t("launcher.err.exeMissing"));
         var command = new java.util.ArrayList<String>();
         command.add(exe.toString());
         arguments.lines().filter(line -> !line.isEmpty()).forEach(command::add);

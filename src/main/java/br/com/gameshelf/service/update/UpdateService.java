@@ -48,11 +48,13 @@ public final class UpdateService {
         this.clock = clock;
     }
 
-    public static ReleaseTransport defaultTransport() {
-        HttpClient client = HttpClient.newBuilder()
+    private static final class ClientHolder {
+        static final HttpClient client = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(5))
                 .followRedirects(HttpClient.Redirect.NORMAL)
                 .build();
+    }
+    public static ReleaseTransport defaultTransport() {
         return (url, etag) -> {
             HttpRequest.Builder req = HttpRequest.newBuilder(URI.create(url))
                     .timeout(Duration.ofSeconds(8))
@@ -62,7 +64,8 @@ public final class UpdateService {
             if (etag != null && !etag.isBlank()) {
                 req.header("If-None-Match", etag);
             }
-            HttpResponse<String> resp = client.send(req.build(), HttpResponse.BodyHandlers.ofString());
+            br.com.gameshelf.NetworkPolicy.requireOnline();
+            HttpResponse<String> resp = ClientHolder.client.send(req.build(), HttpResponse.BodyHandlers.ofString());
             String respEtag = resp.headers().firstValue("ETag").orElse("");
             return new TransportResponse(resp.statusCode(), resp.body() == null ? "" : resp.body(), respEtag);
         };

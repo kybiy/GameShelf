@@ -4,7 +4,7 @@ import java.util.*;
 
 /** Leitores pequenos de JSON e KeyValues de texto, sem dependências externas. */
 public final class ManifestParser {
-    private final String s; private int p;
+    private final String s; private int p, depth;
     private ManifestParser(String s) { this.s = s.startsWith("\uFEFF") ? s.substring(1) : s; }
     public static Map<String,Object> json(String s) { return map(new ManifestParser(s).jsonValue()); }
     public static Object jsonAny(String s) { return new ManifestParser(s).jsonValue(); }
@@ -30,7 +30,11 @@ public final class ManifestParser {
             } else b.append(c);
         } throw new IllegalArgumentException("String incompleta");
     }
-    private Object jsonValue() { ws(); if(p>=s.length())throw new IllegalArgumentException("JSON incompleto"); char c=s.charAt(p);
+    private Object jsonValue() {
+        if(++depth>96)throw new IllegalArgumentException("JSON nesting limit");
+        try{return readJsonValue();}finally{depth--;}
+    }
+    private Object readJsonValue() { ws(); if(p>=s.length())throw new IllegalArgumentException("JSON incompleto"); char c=s.charAt(p);
         if(c=='"')return quoted(true);
         if(eat('{')) { Map<String,Object> m=new LinkedHashMap<>(); if(eat('}'))return m; do {String k=quoted(true);need(':');m.put(k,jsonValue());}while(eat(','));need('}');return m; }
         if(eat('[')) { List<Object> a=new ArrayList<>();if(eat(']'))return a;do{a.add(jsonValue());}while(eat(','));need(']');return a; }
@@ -38,5 +42,6 @@ public final class ManifestParser {
     }
     private void vws(){while(true){ws();if(s.startsWith("//",p)){while(p<s.length()&&s.charAt(p)!='\n')p++;}else return;}}
     private String token(){vws();if(p>=s.length())throw new IllegalArgumentException("VDF incompleto");if(s.charAt(p)=='"')return quoted(false);int a=p;while(p<s.length()&&!Character.isWhitespace(s.charAt(p))&&"{}".indexOf(s.charAt(p))<0)p++;if(a==p)throw new IllegalArgumentException("VDF inválido");return s.substring(a,p);}
-    private Map<String,Object> vdfObject(boolean nested){Map<String,Object> m=new TreeMap<>(String.CASE_INSENSITIVE_ORDER);while(true){vws();if(p>=s.length()){if(nested)throw new IllegalArgumentException("VDF incompleto");return m;}if(nested&&eat('}'))return m;String k=token();vws();m.put(k,eat('{')?vdfObject(true):token());}}
+    private Map<String,Object> vdfObject(boolean nested){if(++depth>96)throw new IllegalArgumentException("VDF nesting limit");try{return readVdf(nested);}finally{depth--;}}
+    private Map<String,Object> readVdf(boolean nested){Map<String,Object> m=new TreeMap<>(String.CASE_INSENSITIVE_ORDER);while(true){vws();if(p>=s.length()){if(nested)throw new IllegalArgumentException("VDF incompleto");return m;}if(nested&&eat('}'))return m;String k=token();vws();m.put(k,eat('{')?vdfObject(true):token());}}
 }

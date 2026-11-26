@@ -150,6 +150,9 @@ final class DiagnosticsTest {
         var snap = ProcessDiagnostics.capture(lib, tracker, true);
         assertEquals(2, snap.monitoredGames().size());
         assertEquals(1, snap.conflicts().size());
-        assertTrue(snap.monitoredGames().stream().allMatch(ProcessDiagnostics.MonitoredGameInfo::activeSession));
+        assertTrue(snap.monitoredGames().stream().noneMatch(ProcessDiagnostics.MonitoredGameInfo::activeSession));
+        lib.remove("local:2");
+        tracker.tick(List.of("C:/Games/Shared/app.exe"),2_000_000_000L);
+        assertTrue(ProcessDiagnostics.capture(lib,tracker,true).monitoredGames().getFirst().activeSession());
     }
 }

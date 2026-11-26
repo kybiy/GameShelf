@@ -7,6 +7,7 @@
     -shelf-ink: #f0f1f7;
     -shelf-muted: #a6adbf;
     -shelf-accent: #929cff;
+    -shelf-on-accent: black;
     -shelf-green: #71d6a6;
     -fx-font-family: "Segoe UI";
     -fx-font-size: 13px;
@@ -46,15 +47,15 @@
     -fx-border-color: -shelf-accent; -fx-border-radius: 7;
 }
 .button:hover, .menu-button:hover, .combo-box:hover { -fx-background-color: derive(-shelf-field,12%); }
-.button.primary, .cover-play { -fx-background-color: -shelf-accent; -fx-text-fill: #191c2c; -fx-font-weight: bold; }
+.button.primary, .cover-play { -fx-background-color: -shelf-accent; -fx-text-fill: -shelf-on-accent; -fx-font-weight: bold; }
 .button.primary:hover, .button.cover-play:hover { -fx-background-color: derive(-shelf-accent,12%); }
-.cover-play .glyph { -fx-stroke: #191c2c; }
+.cover-play .glyph { -fx-stroke: -shelf-on-accent; }
 .tool { -fx-padding: 6 8; }
 .quiet { -fx-background-color: -shelf-field; }
 .button.nav { -fx-alignment: center-left; -fx-background-color: transparent; -fx-padding: 4 8; -fx-graphic-text-gap: 10; -fx-text-fill: -shelf-muted; }
 .button.nav:hover { -fx-background-color: -shelf-field; -fx-text-fill: -shelf-ink; }
-.button.selected, .button.nav.selected { -fx-background-color: -shelf-accent; -fx-text-fill: #151927; }
-.button.selected .glyph { -fx-stroke: #151927; }
+.button.selected, .button.nav.selected { -fx-background-color: -shelf-accent; -fx-text-fill: -shelf-on-accent; }
+.button.selected .glyph { -fx-stroke: -shelf-on-accent; }
 .side-bottom { -fx-padding: 10 0 0 0; -fx-border-color: -shelf-line transparent transparent transparent; }
 .platform-mark { -fx-background-color: #30394c; -fx-text-fill: #c1cce4; -fx-font-size: 9px; -fx-font-weight: bold; -fx-alignment: center; -fx-min-width: 20; -fx-pref-height: 20; -fx-background-radius: 6; }
 .store-0 { -fx-background-color: #20394b; -fx-text-fill: #9cd7ed; }

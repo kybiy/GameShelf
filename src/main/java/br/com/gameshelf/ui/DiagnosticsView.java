@@ -209,6 +209,8 @@ public final class DiagnosticsView extends ScrollPane {
         procPanel.getChildren().addAll(
                 kv(i18n.t("diag.card.monitor"), i18n.t(procs.monitorActive() ? "diag.monitor.active" : "diag.monitor.unavailable")),
                 kv(i18n.t("diag.processes.interval"), procs.intervalSeconds() + " " + i18n.t("unit.second.short")),
+                kv(i18n.t("diag.scanMs"),String.format("%.2f ms",procs.meanScanMillis())),
+                kv(i18n.t("settings.offline"),Boolean.toString(procs.offline())),
                 kv(i18n.t("diag.processes.scanned"), i18n.formatInt(procs.processesScanned())),
                 kv(i18n.t("diag.processes.accessErrors"), i18n.formatInt(procs.accessErrors())),
                 kv(i18n.t("diag.processes.lastSave"), procs.lastSaveAt() == null ? "—" : i18n.formatDateTime(procs.lastSaveAt())),

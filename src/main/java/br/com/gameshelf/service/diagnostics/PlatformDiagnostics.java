@@ -116,7 +116,7 @@ public final class PlatformDiagnostics {
                 if (!Files.isRegularFile(vdf)) continue;
                 vdfs.add(vdf.toString());
                 try {
-                    Map<String, Object> data = ManifestParser.map(ManifestParser.vdf(Files.readString(vdf)).get("libraryfolders"));
+                    Map<String, Object> data = ManifestParser.map(ManifestParser.vdf(br.com.gameshelf.Detector.readManifest(vdf)).get("libraryfolders"));
                     for (var e : data.entrySet()) {
                         if (e.getKey().matches("\\d+")) {
                             Object v = e.getValue();
@@ -143,7 +143,7 @@ public final class PlatformDiagnostics {
                 for (Path f : files) {
                     acfFiles.add(f.toString());
                     try {
-                        Map<String, Object> m = ManifestParser.map(ManifestParser.vdf(Files.readString(f)).get("AppState"));
+                        Map<String, Object> m = ManifestParser.map(ManifestParser.vdf(br.com.gameshelf.Detector.readManifest(f)).get("AppState"));
                         String id = ManifestParser.str(m, "appid");
                         String name = ManifestParser.str(m, "name");
                         String dir = ManifestParser.str(m, "installdir");
@@ -228,7 +228,7 @@ public final class PlatformDiagnostics {
                 for (Path f : files) {
                     itemFiles.add(f.toString());
                     try {
-                        Map<String, Object> m = ManifestParser.json(Files.readString(f));
+                        Map<String, Object> m = ManifestParser.json(br.com.gameshelf.Detector.readManifest(f));
                         String id = ManifestParser.str(m, "AppName");
                         String name = ManifestParser.str(m, "DisplayName");
                         String loc = ManifestParser.str(m, "InstallLocation");

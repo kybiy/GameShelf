@@ -1,4 +1,4 @@
-﻿param(
+param(
     [string]$ReleaseVersion = ""
 )
 
@@ -145,6 +145,8 @@ Write-Host "`n[3/5] Gerando app-image portátil via jpackage..." -ForegroundColo
     --input $InputDir `
     --main-jar "gameshelf-$PomVersion.jar" `
     --main-class "br.com.gameshelf.Main" `
+    --java-options "-Xms16m" `
+    --java-options "-XX:+UseSerialGC" `
     --runtime-image $RuntimeDir `
     --dest $AppImageDest
 if ($LASTEXITCODE -ne 0) {

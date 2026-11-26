@@ -23,6 +23,8 @@ public final class ProcessDiagnostics {
     public record Snapshot(
             boolean monitorActive,
             int intervalSeconds,
+            double meanScanMillis,
+            boolean offline,
             int processesScanned,
             int accessErrors,
             Instant lastPollAt,
@@ -79,6 +81,8 @@ public final class ProcessDiagnostics {
         return new Snapshot(
                 monitorActive,
                 2,
+                tracker.meanScanMillis(),
+                Boolean.parseBoolean(library.setting("offline","false")),
                 tracker.lastProcessesScanned(),
                 tracker.lastAccessErrors(),
                 tracker.lastPollAt(),

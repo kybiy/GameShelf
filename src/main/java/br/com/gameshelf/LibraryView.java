@@ -374,7 +374,7 @@ final class LibraryView extends VBox {
         tile.setFocusTraversable(true);
         tile.setAccessibleText(g.name() + " · " + platformText);
         tile.setOnKeyPressed(e -> {
-            if (e.getCode() == KeyCode.ENTER) {
+            if (e.getTarget()==tile && (e.getCode()==KeyCode.ENTER || e.getCode()==KeyCode.SPACE)) {
                 app.details(g);
                 e.consume();
             }
@@ -387,8 +387,9 @@ final class LibraryView extends VBox {
         });
         tile.setOnContextMenuRequested(e -> app.actions.menu(g).show(tile, e.getScreenX(), e.getScreenY()));
         TranslateTransition hover = new TranslateTransition(Duration.millis(170), frame);
+        play.visibleProperty().bind(tile.hoverProperty().or(tile.focusedProperty()).or(play.focusedProperty()).and(play.disabledProperty().not()).and(new javafx.beans.property.SimpleBooleanProperty(!listMode)));
         tile.hoverProperty().addListener((o, old, on) -> {
-            play.setVisible(on && !listMode && !play.isDisabled());
+
             if (!listMode && app.flag("animations", true)) {
                 hover.stop();
                 hover.setToY(on ? -3 : 0);
