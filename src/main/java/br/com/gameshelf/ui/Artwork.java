@@ -1,0 +1,95 @@
+package br.com.gameshelf.ui;
+
+import br.com.gameshelf.Game;
+import javafx.application.Platform;
+import javafx.scene.image.Image;
+import java.io.*;
+import java.net.*;
+import java.nio.file.*;
+import java.time.*;
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.function.Consumer;
+
+/** All file access, decoding and network work runs outside the application thread. */
+public final class Artwork implements AutoCloseable {
+    public enum Kind { COVER, BANNER }
+    private final Path cache;
+    private final ExecutorService pool=Executors.newFixedThreadPool(3,Thread.ofPlatform().daemon().name("gameshelf-art-",0).factory());
+    private final Map<String,CompletableFuture<Image>> pending=new HashMap<>();
+    private final Map<String,Instant> misses=new HashMap<>();
+    private final LinkedHashMap<String,Image> images=new LinkedHashMap<>(32,.75f,true);
+    private volatile int limitMb=256;
+    public Artwork(Path data) { cache=data.resolve("cache"); }
+    public void load(Game g,Kind kind,String local,Consumer<Image> show) {
+        String key=g.id()+"/"+kind+"/"+local;
+        Image hit=images.get(key);
+        if(hit!=null){show.accept(hit);return;}
+        if(misses.getOrDefault(key,Instant.EPOCH).isAfter(Instant.now()))return;
+        CompletableFuture<Image> task=pending.get(key);
+        if(task==null) {
+            task=CompletableFuture.supplyAsync(()->read(g,kind,local),pool);
+            pending.put(key,task);
+            task.whenComplete((image,error)->Platform.runLater(()->{
+                pending.remove(key);
+                if(image==null) misses.put(key,Instant.now().plusSeconds(300));
+                else {
+                    images.put(key,image);
+                    while(images.size()>48)images.pollFirstEntry();
+                }
+            }));
+        }
+        task.thenAccept(image->{if(image!=null)Platform.runLater(()->show.accept(image));});
+    }
+    private Image read(Game g,Kind kind,String local) {
+        try {
+            boolean catalog=local.startsWith("https://cdn2.steamgriddb.com/");
+            if(!local.isBlank()&&!catalog) try(InputStream in=Files.newInputStream(Path.of(local))){return decode(in,kind);}
+            if(!catalog&&!g.id().matches("steam:[0-9]+"))return null;
+            String asset=kind==Kind.COVER?"library_600x900.jpg":"library_hero.jpg";
+            String filename=catalog?UUID.nameUUIDFromBytes(local.getBytes(java.nio.charset.StandardCharsets.UTF_8)).toString():g.id().substring(6)+"-"+kind;
+            Path file=cache.resolve(filename+".jpg");
+            if(Files.isRegularFile(file))try(InputStream in=Files.newInputStream(file)){
+                Image image=decode(in,kind);
+                if(image!=null)return image;
+            }
+            String url=catalog?local:"https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/"+g.id().substring(6)+"/"+asset;
+            URLConnection connection=URI.create(url).toURL().openConnection();
+            connection.setConnectTimeout(3500);connection.setReadTimeout(5000);
+            try(InputStream in=connection.getInputStream()){
+                int limit=12*1024*1024;
+                byte[] bytes=in.readNBytes(limit+1);
+                if(bytes.length>limit)return null;
+                Image image=decode(new ByteArrayInputStream(bytes),kind);
+                if(image!=null)store(file,bytes);
+                return image;
+            }
+        } catch(Exception e){return null;}
+    }
+    private Image decode(InputStream in,Kind kind) {
+        Image image=new Image(in,kind==Kind.COVER?384:1280,kind==Kind.COVER?576:480,true,true);
+        return image.isError()?null:image;
+    }
+    private synchronized void store(Path file,byte[] bytes)throws IOException{
+        Files.createDirectories(cache);
+        Path tmp=Files.createTempFile(cache,"art-",".tmp");
+        try { Files.write(tmp,bytes);Files.move(tmp,file,StandardCopyOption.REPLACE_EXISTING); }
+        finally {Files.deleteIfExists(tmp);}
+        trim(limitMb);
+    }
+    public void limit(int mb){limitMb=mb;pool.execute(()->{try{trim(mb);}catch(IOException ignored){}});}
+    public synchronized void trim(int mb)throws IOException{
+        if(!Files.isDirectory(cache))return;
+        try(var entries=Files.list(cache)){
+            var files=entries.filter(f->f.getFileName().toString().matches("(?:[0-9]+-(?:COVER|BANNER)|[a-f0-9-]{36})\\.jpg"))
+                .map(Path::toFile).sorted(Comparator.comparingLong(File::lastModified).reversed()).toList();
+            long size=0;
+            for(var file:files){
+                size+=file.length();
+                if(size>mb*1024L*1024L)Files.deleteIfExists(file.toPath());
+            }
+        }
+    }
+    public void retry() { misses.clear();images.clear(); }
+    public void close() { pool.shutdownNow(); }
+}

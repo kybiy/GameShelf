@@ -1,0 +1,97 @@
+# GameShelf
+
+Biblioteca de jogos para Windows 10 e 11, com interface JavaFX em português. Reúne jogos detectados no computador e cadastros manuais. O monitor registra sessões inclusive quando o jogo é iniciado fora do GameShelf.
+
+## Executar
+
+Use um JDK 21 e Maven. A primeira compilação precisa de internet para obter as dependências. No NetBeans, abra a pasta que contém `pom.xml` e pressione **F6**. A ação **Run** usa o objetivo `javafx:run`.
+
+```sh
+mvn javafx:run
+```
+
+Para gerar e abrir o pacote no mesmo sistema operacional da compilação, execute os comandos abaixo. Mantenha a pasta `target/lib` ao lado do JAR ao copiá-lo.
+
+```sh
+mvn clean package
+java -jar target/gameshelf-0.1.0.jar
+```
+
+O aplicativo usa JavaFX Controls 21.0.8 e SQLite JDBC 3.49.1.0. JUnit Jupiter é usado nos testes. O Windows mantém os controles nativos de movimentação, redimensionamento e maximização da janela.
+
+## Usar a biblioteca
+
+- **Todos os jogos** exibe capas em uma grade responsiva ou em lista. Pesquise pelo nome, filtre por plataforma e instalação e ordene por nome, tempo, sessão ou adição. Favoritos e recentes têm páginas próprias.
+- Clique em uma capa para abrir os detalhes. O botão **Jogar** também aparece ao passar o mouse sobre a capa de um jogo instalado. O menu de contexto reúne favoritos, imagens, monitoramento e remoção de cadastros manuais.
+- **Adicionar jogo** aceita executáveis e atalhos do Windows. Também é possível soltá-los na biblioteca. As opções adicionais incluem plataforma, pastas, argumentos (um por linha), executável monitorado, arte e horas iniciais. Para atalhos, o Windows aplica os argumentos e o diretório de trabalho definidos no próprio atalho. Escolha o executável do jogo para contabilizar suas sessões.
+- As capas e os banners da Steam são buscados em segundo plano pelo AppID. O cache permite reutilização offline. Qualquer jogo aceita arquivos PNG ou JPEG escolhidos pelo usuário. Mantenha essas imagens locais nos caminhos cadastrados. Quando uma imagem está indisponível, a biblioteca usa uma ilustração própria.
+- Para pesquisar outras artes, cadastre sua chave pessoal em **Configurações → SteamGridDB**. No menu do jogo, escolha **Pesquisar no SteamGridDB**, confirme a edição e escolha uma imagem. A chave é opcional e fica no banco local, inclusive em suas cópias de backup.
+- **Configurações** permite escolher tema, destaque, dimensões das capas, animações, menu recolhido, busca inicial, comportamento de bandeja e tamanho do cache. Em janelas estreitas, o menu recolhe automaticamente até que você escolha uma preferência.
+- **Estatísticas** mostra atividade diária e mensal, calendário, ranking e distribuição de horas por plataforma. O detalhe do jogo inclui sessão em andamento, últimos 7 e 30 dias e histórico com horário e duração.
+
+## Detecção e tempo de jogo
+
+| Plataforma | Como funciona |
+| --- | --- |
+| Steam | Lê `libraryfolders.vdf` e os manifestos ACF, inclusive em discos secundários. Inicia o jogo pelo AppID. |
+| Epic Games | Lê os manifestos locais `.item` e usa o protocolo Epic para abrir o jogo. |
+| Roblox | Identifica o cliente instalado pelo navegador e acompanha as pastas de versões. O botão Jogar abre o catálogo oficial. |
+| Riot Games | Detecção experimental de League of Legends e VALORANT na pasta padrão por unidade. O monitor usa o executável da partida. |
+| Outras plataformas | Cadastro manual por executável ou atalho. |
+
+O monitor verifica os processos aproximadamente a cada dois segundos. Steam e Epic usam a pasta da instalação e exclusões de launchers comuns. Jogos manuais usam o caminho do executável monitorado. Para jogos com launchers intermediários, processos protegidos ou runtimes compartilhados, a identificação depende dos caminhos disponíveis no Windows. Um `javaw.exe` compartilhado pode precisar de uma instalação de runtime exclusiva para identificar o jogo corretamente.
+
+Múltiplos processos do mesmo jogo contam uma vez. Cada jogo aberto acumula o próprio tempo. Os gráficos de atividade geral unem períodos simultâneos. O total de horas dos jogos inclui horas antigas e iniciais. Os gráficos por data usam somente sessões observadas.
+
+Uma lacuna de monitoramento superior a dez segundos inicia uma nova sessão. As gravações periódicas, a cada cinco segundos, preservam o tempo e a última observação juntos. Após uma interrupção, o intervalo com o aplicativo fechado fica fora da contagem. Fechar a janela pode manter o monitor ativo na bandeja. **Sair do GameShelf** encerra o processo.
+
+## Dados e migração
+
+O banco é `%LOCALAPPDATA%\GameShelf\library.db` e as imagens baixadas ficam na subpasta `cache`. Se `LOCALAPPDATA` estiver ausente, o aplicativo usa `~/.gameshelf`. Uma trava impede duas instâncias de gravarem na mesma biblioteca.
+
+Na primeira abertura, o GameShelf importa o antigo `library.properties` em uma única transação. Preserva IDs, caminhos, favoritos, estado de instalação, executável de monitoramento e segundos acumulados. O arquivo original permanece disponível. Uma falha de migração impede a abertura e permite corrigir o arquivo e tentar novamente. Horas antigas sem horário conhecido permanecem apenas no total.
+
+Em **Configurações → Dados locais**, exporte a biblioteca ou as sessões em CSV, ou salve um backup SQLite. Para restaurar manualmente, encerre o aplicativo pela bandeja, guarde uma cópia do banco atual e coloque o backup no diretório de dados com o nome `library.db`. As imagens escolhidas em arquivos locais devem ser copiadas separadamente.
+
+## Organização
+
+| Arquivos principais | Responsabilidade |
+| --- | --- |
+| `Main`, `GameShelfApp`, `DesktopTray` | Inicialização, instância única e bandeja |
+| `MainWindow`, `LibraryView`, `ActivityView`, `SettingsView`, `GameActions` | Janela, biblioteca virtualizada, detalhes, estatísticas, preferências e diálogos |
+| `ui/Ui`, `ui/Poster`, `ui/Artwork`, `GridDb`, `resources/css/gameshelf.css` | Componentes, ilustrações, imagens, catálogo e tema |
+| `Library`, `GameDatabase`, `Game`, `Session` | Dados da biblioteca, transações, migração e sessões |
+| `Playtime`, `Activity` | Monitoramento e agregação de intervalos |
+| `Detector`, `ManifestParser`, `Launcher` | Descoberta, leitura de manifestos e inicialização |
+
+## Validação
+
+```sh
+mvn clean test
+mvn clean package
+```
+
+Os testes exercitam os detectores com instalações temporárias, a associação de processos, a persistência, a migração, o backup e o cálculo de períodos simultâneos. Para testar a interface em uma sessão gráfica, execute o comando abaixo. As capturas ficam em `target/ui-test`. Nenhum jogo de exemplo é cadastrado na biblioteca do usuário.
+
+```sh
+mvn "-Dgameshelf.uiTest=true" test
+```
+
+Acrescente `"-Dgameshelf.liveArt=true"` para incluir o download real de capas e de um banner da Steam no teste gráfico. A abertura de launchers reais, permissões de processos e a bandeja dependem da instalação local. A integração opcional com SteamGridDB exige uma chave válida.
+
+## Desenvolver em outro computador
+
+Instale o JDK 21 pelo instalador do [Eclipse Temurin](https://adoptium.net/temurin/releases/?version=21). Habilite as opções para definir JAVA_HOME e adicionar o Java ao PATH. Instale o Apache Maven ou use o Maven incluído no NetBeans. Confira o JDK ativo com `mvn -version`.
+
+Com acesso ao repositório privado, execute:
+
+```sh
+git clone https://github.com/kybiy/GameShelf.git
+cd GameShelf
+mvn clean package
+mvn javafx:run
+```
+
+O projeto abre com uma biblioteca vazia quando não há jogos instalados. Os dados pessoais são criados em cada computador. As bibliotecas nativas são resolvidas pelo Maven. A integração da barra de título do Windows utiliza JNA.
+
+Para continuar o desenvolvimento, atualize a branch com `git pull --ff-only`, revise as alterações com `git diff`, faça o commit dos arquivos desejados e execute `git push`. A validação com instalações reais dos jogos e a ampliação da cobertura dos detectores são trabalhos futuros. Os testes gráficos usam jogos de exemplo em um banco temporário. O aplicativo distribuído não possui um modo de demonstração selecionável.
