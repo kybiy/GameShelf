@@ -83,7 +83,7 @@ Acrescente `"-Dgameshelf.liveArt=true"` para incluir o download real de capas e 
 
 Instale o JDK 21 pelo instalador do [Eclipse Temurin](https://adoptium.net/temurin/releases/?version=21). Habilite as opções para definir JAVA_HOME e adicionar o Java ao PATH. Instale o Apache Maven ou use o Maven incluído no NetBeans. Confira o JDK ativo com `mvn -version`.
 
-Com acesso ao repositório privado, execute:
+Com o repositório público no GitHub, execute:
 
 ```sh
 git clone https://github.com/kybiy/GameShelf.git
@@ -92,6 +92,29 @@ mvn clean package
 mvn javafx:run
 ```
 
-O projeto abre com uma biblioteca vazia quando não há jogos instalados. Os dados pessoais são criados em cada computador. As bibliotecas nativas são resolvidas pelo Maven. A integração da barra de título do Windows utiliza JNA.
+O projeto abre com uma biblioteca vazia quando não há jogos instalados. Os dados pessoais são criados automaticamente em cada computador (`%LOCALAPPDATA%\GameShelf\library.db` ou `~/.gameshelf`). As bibliotecas nativas são resolvidas pelo Maven. A integração da barra de título do Windows utiliza JNA.
 
-Para continuar o desenvolvimento, atualize a branch com `git pull --ff-only`, revise as alterações com `git diff`, faça o commit dos arquivos desejados e execute `git push`. A validação com instalações reais dos jogos e a ampliação da cobertura dos detectores são trabalhos futuros. Os testes gráficos usam jogos de exemplo em um banco temporário. O aplicativo distribuído não possui um modo de demonstração selecionável.
+Para continuar o desenvolvimento, atualize a branch com `git pull --ff-only`, revise as alterações com `git diff`, faça o commit dos arquivos desejados e execute `git push`.
+
+## Limitações conhecidas
+
+- **Modo de demonstração**: o aplicativo distribuído não possui um modo de demonstração selecionável na interface; os testes gráficos (`-Dgameshelf.uiTest=true`) criam jogos de exemplo apenas em um banco temporário.
+- **Processos protegidos e runtimes compartilhados**: jogos com *anti-cheat* restritivo, *launchers* intermediários ou runtimes compartilhados (como `javaw.exe`) podem exigir configuração manual do executável monitorado.
+- **Plataformas experimentais**: a detecção da Riot Games (League of Legends e VALORANT) considera a pasta padrão por unidade e o executável da partida; a validação com instalações reais de jogos ainda é limitada.
+- **Sistema operacional**: a detecção automática de lojas e a integração de barra de título nativa visam Windows 10 e 11.
+
+## Roadmap de desenvolvimento
+
+- Validação em campo dos detectores e do contador de horas com instalações reais de jogos.
+- Ampliação da cobertura de detectores para novas lojas e plataformas.
+- Melhorias contínuas na experiência de biblioteca, estatísticas e gerenciamento de capas.
+
+## Contribuição e segurança
+
+Contribuições são bem-vindas! Leia o guia em [CONTRIBUTING.md](CONTRIBUTING.md) para entender o fluxo de branches (`main`, `develop`, `feat/*`, `fix/*`, `refactor/*`, `docs/*`), execução de testes e abertura de Pull Requests.
+
+Para reportar vulnerabilidades com responsabilidade, consulte [SECURITY.md](SECURITY.md).
+
+## Licença
+
+Este projeto está licenciado sob a [Licença MIT](LICENSE).
