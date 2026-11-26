@@ -44,6 +44,17 @@ public final class Ui {
             case "game" -> "M7 6 C3 6 2 12 2 16 C2 21 6 19 9 15 H15 C18 19 22 21 22 16 C22 12 21 6 17 6 Z M5 10 H10 M7.5 8 V13 M16 10 h1 M18 12 h1";
             case "folder" -> "M2 6 H9 L11 8 H22 L20 19 H2 Z";
             case "filter" -> "M3 5 H21 M6 12 H18 M9 19 H15";
+            case "diagnostics" -> "M3 12 H7 L10 5 L14 19 L17 12 H21";
+            case "update" -> "M12 3 V14 M7 10 L12 15 L17 10 M4 17 V20 H20 V17";
+            case "globe" -> "M12 2 A10 10 0 1 1 11.99 2 M2 12 H22 M12 2 C15 6 15 18 12 22 C9 18 9 6 12 2";
+            case "check" -> "M4 12 L9 17 L20 6";
+            case "warning" -> "M12 3 L21 19 H3 Z M12 9 V13 M12 16 v1";
+            case "copy" -> "M9 9 H19 V21 H9 Z M5 15 H4 V4 H15 V5";
+            case "export" -> "M12 15 V4 M7 9 L12 4 L17 9 M4 16 V20 H20 V16";
+            case "external" -> "M14 4 H20 V10 M20 4 L11 13 M10 6 H5 V19 H18 V14";
+            case "cpu" -> "M7 7 H17 V17 H7 Z M9 3 V7 M15 3 V7 M9 17 V21 M15 17 V21 M3 9 H7 M3 15 H7 M17 9 H21 M17 15 H21";
+            case "memory" -> "M3 7 H21 V17 H3 Z M7 10 V14 M11 10 V14 M15 10 V14 M19 17 V19 M5 17 V19";
+            case "database" -> "M12 3 C7 3 4 4.8 4 7 V17 C4 19.2 7 21 12 21 C17 21 20 19.2 20 17 V7 C20 4.8 17 3 12 3 M4 7 C4 9.2 7 11 12 11 C17 11 20 9.2 20 7 M4 12 C4 14.2 7 16 12 16 C17 16 20 14.2 20 12";
             default -> "M4 7 L12 3 L20 7 L12 11 Z M4 12 L12 16 L20 12 M4 17 L12 21 L20 17";
         };
         SVGPath shape=new SVGPath(); shape.setContent(path); shape.getStyleClass().add("glyph");
