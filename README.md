@@ -1,8 +1,21 @@
 # GameShelf
 
+> **Status do projeto (Alpha):** O GameShelf está em desenvolvimento ativo (`v0.1.0-alpha.1`). A detecção de jogos reais e o contador de horas ainda precisam de validação em computadores com jogos instalados.
+
 Biblioteca de jogos para Windows 10 e 11, com interface JavaFX em português. Reúne jogos detectados no computador e cadastros manuais. O monitor registra sessões inclusive quando o jogo é iniciado fora do GameShelf.
 
-## Executar
+## Download e instalação no Windows
+
+Baixe a versão mais recente em **[GitHub Releases](https://github.com/kybiy/GameShelf/releases/latest)** (ou diretamente a [v0.1.0-alpha.1](https://github.com/kybiy/GameShelf/releases/tag/v0.1.0-alpha.1)):
+
+- **Instalador (`GameShelf-*-win-x64.exe`)**: instalação por usuário (sem exigir administrador), com atalho no Menu Iniciar, opção de atalho na Área de Trabalho e desinstalador no Windows. Não requer Java instalado.
+- **Versão portátil (`GameShelf-*-portable-win-x64.zip`)**: extraia o ZIP e execute `GameShelf.exe` diretamente, sem instalação.
+
+Seus jogos, horas, favoritos, configurações e banco de dados ficam salvos separadamente em `%LOCALAPPDATA%\GameShelf` e são preservados ao atualizar o aplicativo.
+
+> **Aviso do Windows SmartScreen:** os executáveis desta versão Alpha ainda não possuem assinatura digital. Ao abrir o instalador ou `GameShelf.exe` pela primeira vez, o Windows Defender SmartScreen pode exibir um aviso; clique em **Mais informações** e depois em **Executar assim mesmo** se desejar prosseguir.
+
+## Executar pelo código-fonte
 
 Use um JDK 21 e Maven. A primeira compilação precisa de internet para obter as dependências. No NetBeans, abra a pasta que contém `pom.xml` e pressione **F6**. A ação **Run** usa o objetivo `javafx:run`.
 
@@ -109,11 +122,28 @@ Para continuar o desenvolvimento, atualize a branch com `git pull --ff-only`, re
 - Ampliação da cobertura de detectores para novas lojas e plataformas.
 - Melhorias contínuas na experiência de biblioteca, estatísticas e gerenciamento de capas.
 
-## Contribuição e segurança
+## Gerar executáveis para Windows
 
-Contribuições são bem-vindas! Leia o guia em [CONTRIBUTING.md](CONTRIBUTING.md) para entender o fluxo de branches (`main`, `develop`, `feat/*`, `fix/*`, `refactor/*`, `docs/*`), execução de testes e abertura de Pull Requests.
+Para gerar o instalador (`.exe`), a versão portátil (`.zip`) e o arquivo `SHA256SUMS.txt` em `dist/`:
 
-Para reportar vulnerabilidades com responsabilidade, consulte [SECURITY.md](SECURITY.md).
+1. Tenha instalados JDK 21+, Apache Maven e [WiX Toolset 3.11+](https://wixtoolset.org/) (ou extraia `wix314-binaries.zip` em `%LOCALAPPDATA%\Programs\wix314`).
+2. Execute no PowerShell:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\build-windows.ps1
+```
+
+Para gerar uma versão com sufixo de pré-lançamento (como `0.1.0-alpha.1`), informe `-ReleaseVersion`:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\build-windows.ps1 -ReleaseVersion "0.1.0-alpha.1"
+```
+
+## Contribuição, feedback e segurança
+
+- **Reportar bugs ou enviar feedback**: abra uma issue em [GitHub Issues](https://github.com/kybiy/GameShelf/issues) usando os modelos disponíveis. Nunca anexe seu `library.db` pessoal, chaves do SteamGridDB ou logs com informações sensíveis.
+- **Contribuir com código**: leia o guia em [CONTRIBUTING.md](CONTRIBUTING.md) para entender o fluxo de branches (`main`, `develop`, `feat/*`, `fix/*`, `refactor/*`, `docs/*`), execução de testes e abertura de Pull Requests.
+- **Vulnerabilidades**: consulte [SECURITY.md](SECURITY.md).
 
 ## Licença
 
