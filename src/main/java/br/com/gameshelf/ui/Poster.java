@@ -38,7 +38,7 @@ public final class Poster extends Region {
             double scale=Math.max(w/src.getWidth(),h/src.getHeight());
             double sw=w/scale,sh=h/scale;
             image.setViewport(new Rectangle2D((src.getWidth()-sw)/2,(src.getHeight()-sh)/2,sw,sh));
-            image.setFitWidth(w);image.setFitHeight(h);canvas.setVisible(false);
+            image.setFitWidth(w);image.setFitHeight(h);canvas.setVisible(false);canvas.setWidth(0);canvas.setHeight(0);
         }else if(w!=canvas.getWidth()||h!=canvas.getHeight()){
             canvas.setWidth(w);canvas.setHeight(h);draw(w,h);
         }

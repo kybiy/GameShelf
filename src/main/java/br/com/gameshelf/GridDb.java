@@ -17,6 +17,7 @@ final class GridDb {
     private final String key;
     GridDb(String key){this.key=key;}
     private List<Map<String,Object>> get(String path)throws IOException {
+        NetworkPolicy.requireOnline();
         HttpURLConnection request=(HttpURLConnection)URI.create("https://www.steamgriddb.com/api/v2/"+path).toURL().openConnection();
         request.setInstanceFollowRedirects(false);request.setConnectTimeout(4500);request.setReadTimeout(6000);
         request.setRequestProperty("Authorization","Bearer "+key);request.setRequestProperty("Accept","application/json");

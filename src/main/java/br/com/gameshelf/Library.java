@@ -20,7 +20,7 @@ public final class Library {
         database.load(games,sessions,settings,legacy);
     }
     public Path databaseFile() { return database.file; }
-    public String schemaVersion() { return setting("migration.v1", "1").equals("1") ? "v1" : setting("migration.v1", "v1"); }
+    public String schemaVersion() { return "v1"; }
     public String checkDatabaseIntegrity() { synchronized (database) { return database.checkIntegrity(); } }
     public Instant lastSavedAt() { return lastSavedAt; }
     public synchronized int sessionsCount() { return sessions.size(); }
@@ -61,6 +61,16 @@ public final class Library {
         sessions.values().removeIf(s -> s.gameId().equals(id));
         checkpoints.values().removeIf(s -> s.gameId().equals(id));
     }
+    public Path restore(Path source)throws IOException{
+        synchronized(database){synchronized(this){
+            save();
+            Path safety=database.file.resolveSibling("before-restore-"+UUID.randomUUID()+".db");
+            database.restore(source,safety);
+            games.clear();sessions.clear();settings.clear();
+            database.load(games,sessions,settings,database.file.resolveSibling("library.properties"));
+            return safety;
+        }}
+    }
     public void backup(Path destination) throws IOException {
         synchronized(database) {copyBackup(destination);}
     }
@@ -70,7 +80,7 @@ public final class Library {
         save();
         Path tmp=Files.createTempFile(destination.toAbsolutePath().getParent(),"gameshelf-backup-",".tmp");
         try {
-            Files.copy(database.file,tmp,StandardCopyOption.REPLACE_EXISTING);
+            database.export(tmp);
             Files.move(tmp,destination,StandardCopyOption.REPLACE_EXISTING);
         } finally {Files.deleteIfExists(tmp);}
     }

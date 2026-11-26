@@ -27,7 +27,7 @@ Para gerar e abrir o pacote no mesmo sistema operacional da compilação, execut
 
 ```sh
 mvn clean package
-java -jar target/gameshelf-0.1.0.jar
+java -Xms16m -XX:+UseSerialGC -jar target/gameshelf-0.1.0.jar
 ```
 
 O aplicativo usa JavaFX Controls 21.0.8 e SQLite JDBC 3.49.1.0. JUnit Jupiter é usado nos testes. O Windows mantém os controles nativos de movimentação, redimensionamento e maximização da janela.
@@ -38,7 +38,7 @@ O aplicativo usa JavaFX Controls 21.0.8 e SQLite JDBC 3.49.1.0. JUnit Jupiter é
 - Clique em uma capa para abrir os detalhes. O botão **Jogar** também aparece ao passar o mouse sobre a capa de um jogo instalado. O menu de contexto reúne favoritos, imagens, monitoramento e remoção de cadastros manuais.
 - **Adicionar jogo** aceita executáveis e atalhos do Windows. Também é possível soltá-los na biblioteca. As opções adicionais incluem plataforma, pastas, argumentos (um por linha), executável monitorado, arte e horas iniciais. Para atalhos, o Windows aplica os argumentos e o diretório de trabalho definidos no próprio atalho. Escolha o executável do jogo para contabilizar suas sessões.
 - As capas e os banners da Steam são buscados em segundo plano pelo AppID. O cache permite reutilização offline. Qualquer jogo aceita arquivos PNG ou JPEG escolhidos pelo usuário. Mantenha essas imagens locais nos caminhos cadastrados. Quando uma imagem está indisponível, a biblioteca usa uma ilustração própria.
-- Para pesquisar outras artes, cadastre sua chave pessoal em **Configurações → SteamGridDB**. No menu do jogo, escolha **Pesquisar no SteamGridDB**, confirme a edição e escolha uma imagem. A chave é opcional e fica no banco local, inclusive em suas cópias de backup.
+- Para pesquisar outras artes, cadastre sua chave pessoal em **Configurações → SteamGridDB**. No menu do jogo, escolha **Pesquisar no SteamGridDB**, confirme a edição e escolha uma imagem. A chave é opcional e fica no banco local, protegida por DPAPI no Windows e excluída das novas cópias de backup.
 - **Configurações** permite escolher idioma (`Sistema`, `Português (Brasil)` e `English (United States)`) sem reiniciar, tema, destaque, dimensões das capas, animações, menu recolhido, busca inicial, comportamento de bandeja, tamanho do cache e canal de atualizações (`Estável` ou `Experimental`). Em janelas estreitas, o menu recolhe automaticamente até que você escolha uma preferência.
 - **Estatísticas** mostra atividade diária e mensal, calendário, ranking e distribuição de horas por plataforma. O detalhe do jogo inclui sessão em andamento, últimos 7 e 30 dias e histórico com horário e duração.
 - **Verificador de atualizações** consulta o GitHub Releases em segundo plano (sem token, respeitando limites da API) e exibe notas da versão, data, tamanho dos arquivos e botões seguros para download oficial.
@@ -168,3 +168,7 @@ Este projeto está licenciado sob a [Licença MIT](LICENSE).
   mvn -B clean package
   ```
 - **License**: [MIT License](LICENSE). See [PRIVACY.md](PRIVACY.md), [CODE_SIGNING.md](CODE_SIGNING.md), and [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Estabilidade e recuperação
+
+Em Configurações, o modo offline impede novas consultas do próprio aplicativo. O comando **Restaurar backup** valida o arquivo e salva uma cópia de segurança do banco atual antes da substituição. A chave DPAPI pertence ao usuário do Windows; ao migrar para outro PC, cadastre a chave novamente. Os relatórios de desenvolvimento estão em [auditoria técnica](docs/TECHNICAL_AUDIT.md) e [validação doméstica](docs/MANUAL_TEST_PLAN.md).

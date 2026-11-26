@@ -10,6 +10,13 @@ import java.util.stream.Stream;
 /** Cada detector pode ser expandido sem alterar a interface ou o contador. */
 public final class Detector {
     private Detector() {}
+    public static String readManifest(Path file)throws IOException{
+        try(var in=Files.newInputStream(file)){
+            int limit=8*1024*1024;byte[] bytes=in.readNBytes(limit+1);
+            if(bytes.length>limit)throw new IOException("Manifest too large");
+            return java.nio.charset.StandardCharsets.UTF_8.newDecoder().decode(java.nio.ByteBuffer.wrap(bytes)).toString();
+        }
+    }
     public record Result(List<Game> games, List<String> warnings) {}
     public static Result scan() {
         List<Game> out=new ArrayList<>();List<String> errors=new ArrayList<>();Consumer<String> warn=errors::add;
@@ -30,12 +37,12 @@ public final class Detector {
         Set<Path> libs=new LinkedHashSet<>();libs.add(root);
         for(Path vdf:List.of(root.resolve("steamapps/libraryfolders.vdf"),root.resolve("config/libraryfolders.vdf"))) {
             if(!Files.isRegularFile(vdf))continue;
-            try {Map<String,Object> data=ManifestParser.map(ManifestParser.vdf(Files.readString(vdf)).get("libraryfolders"));for(var e:data.entrySet())if(e.getKey().matches("\\d+")){Object v=e.getValue();add(libs,v instanceof String?(String)v:ManifestParser.str(ManifestParser.map(v),"path"));}}
+            try {Map<String,Object> data=ManifestParser.map(ManifestParser.vdf(readManifest(vdf)).get("libraryfolders"));for(var e:data.entrySet())if(e.getKey().matches("\\d+")){Object v=e.getValue();add(libs,v instanceof String?(String)v:ManifestParser.str(ManifestParser.map(v),"path"));}}
             catch(Exception e){warn.accept("Steam bibliotecas: "+e.getMessage());}
         }
         List<Game> games=new ArrayList<>();for(Path lib:libs){Path apps=lib.resolve("steamapps");if(!Files.isDirectory(apps))continue;
             try(DirectoryStream<Path> files=Files.newDirectoryStream(apps,"appmanifest_*.acf")){for(Path f:files)try{
-                Map<String,Object> m=ManifestParser.map(ManifestParser.vdf(Files.readString(f)).get("AppState"));String id=ManifestParser.str(m,"appid"),name=ManifestParser.str(m,"name"),dir=ManifestParser.str(m,"installdir");
+                Map<String,Object> m=ManifestParser.map(ManifestParser.vdf(readManifest(f)).get("AppState"));String id=ManifestParser.str(m,"appid"),name=ManifestParser.str(m,"name"),dir=ManifestParser.str(m,"installdir");
                 if(!id.matches("\\d+")||name.isBlank()||dir.isBlank()||id.equals("228980")||name.toLowerCase(Locale.ROOT).startsWith("steamworks common redistributables"))continue;
                 Path common=apps.resolve("common").toAbsolutePath().normalize(), folder=common.resolve(dir).normalize();if(!folder.startsWith(common)||folder.equals(common)||!Files.isDirectory(folder))continue;
                 String flags=ManifestParser.str(m,"StateFlags");if(!flags.isBlank()&&(Long.parseLong(flags)&4)==0)continue;
@@ -46,7 +53,7 @@ public final class Detector {
     static List<Game> epic(Path manifests,Consumer<String> warn) throws IOException {
         List<Game> games=new ArrayList<>();if(!Files.isDirectory(manifests))return games;
         try(DirectoryStream<Path> files=Files.newDirectoryStream(manifests,"*.item")){for(Path f:files)try{
-            Map<String,Object> m=ManifestParser.json(Files.readString(f));String id=ManifestParser.str(m,"AppName"),name=ManifestParser.str(m,"DisplayName"),loc=ManifestParser.str(m,"InstallLocation"),exe=ManifestParser.str(m,"LaunchExecutable");
+            Map<String,Object> m=ManifestParser.json(readManifest(f));String id=ManifestParser.str(m,"AppName"),name=ManifestParser.str(m,"DisplayName"),loc=ManifestParser.str(m,"InstallLocation"),exe=ManifestParser.str(m,"LaunchExecutable");
             if(id.isBlank()||name.isBlank()||loc.isBlank()||Boolean.TRUE.equals(m.get("bIsIncompleteInstall"))||Boolean.TRUE.equals(m.get("bIsDLC")))continue;
             Path folder=Path.of(loc).toAbsolutePath().normalize();if(!Files.isDirectory(folder))continue;
             String main=ManifestParser.str(m,"MainGameAppName");if(!main.isBlank()&&!main.equals(id))continue;
