@@ -7,6 +7,14 @@ public final class ManifestParser {
     private final String s; private int p;
     private ManifestParser(String s) { this.s = s.startsWith("\uFEFF") ? s.substring(1) : s; }
     public static Map<String,Object> json(String s) { return map(new ManifestParser(s).jsonValue()); }
+    public static Object jsonAny(String s) { return new ManifestParser(s).jsonValue(); }
+    public static List<Map<String,Object>> jsonArray(String s) {
+        Object v = new ManifestParser(s).jsonValue();
+        if (!(v instanceof List<?> list)) throw new IllegalArgumentException("Esperado array JSON");
+        List<Map<String,Object>> out = new ArrayList<>(list.size());
+        for (Object item : list) out.add(map(item));
+        return out;
+    }
     public static Map<String,Object> vdf(String s) { return new ManifestParser(s).vdfObject(false); }
     @SuppressWarnings("unchecked") public static Map<String,Object> map(Object v) { return v instanceof Map<?,?> ? (Map<String,Object>)v : Map.of(); }
     public static String str(Map<String,Object> m,String k) { Object v=m.get(k); return v instanceof String ? (String)v : ""; }

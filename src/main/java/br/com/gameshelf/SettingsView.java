@@ -1,6 +1,9 @@
 package br.com.gameshelf;
 
 import br.com.gameshelf.service.i18n.LanguagePreference;
+import br.com.gameshelf.service.update.AppVersion;
+import br.com.gameshelf.service.update.UpdateChannel;
+import br.com.gameshelf.ui.UpdateDialog;
 import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
@@ -9,6 +12,7 @@ import javafx.util.StringConverter;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
+import java.time.Instant;
 import java.util.*;
 import static br.com.gameshelf.ui.Ui.*;
 
@@ -102,6 +106,48 @@ final class SettingsView {
                 }))
         );
 
+        VBox updates = panel(app.i18n.t("update.section"));
+        ComboBox<UpdateChannel> channel = new ComboBox<>();
+        channel.getItems().addAll(UpdateChannel.STABLE, UpdateChannel.EXPERIMENTAL);
+        channel.setValue(app.updateChannel());
+        channel.setConverter(new StringConverter<>() {
+            @Override
+            public String toString(UpdateChannel ch) {
+                if (ch == null) return "";
+                return app.i18n.t(ch == UpdateChannel.STABLE ? "update.channel.stable" : "update.channel.experimental");
+            }
+
+            @Override
+            public UpdateChannel fromString(String s) {
+                return UpdateChannel.EXPERIMENTAL;
+            }
+        });
+        channel.setOnAction(e -> {
+            if (channel.getValue() != null) app.prefer("update.channel", channel.getValue().code());
+        });
+
+        Instant lastCheck = app.lastUpdateCheckInstant();
+        Label lastCheckValue = label(lastCheck == null ? app.i18n.t("update.lastCheck.never") : app.i18n.formatDateTime(lastCheck), "muted");
+        Button checkNowBtn = button(app.i18n.t("update.checkNow"), "update", "quiet", null);
+        checkNowBtn.setOnAction(e -> {
+            checkNowBtn.setDisable(true);
+            checkNowBtn.setText(app.i18n.t("update.checking"));
+            app.checkUpdatesAsync(true, res -> {
+                checkNowBtn.setDisable(false);
+                checkNowBtn.setText(app.i18n.t("update.checkNow"));
+                Instant refreshed = app.lastUpdateCheckInstant();
+                lastCheckValue.setText(refreshed == null ? app.i18n.t("update.lastCheck.never") : app.i18n.formatDateTime(refreshed));
+            });
+        });
+        Button restoreIgnored = button(app.i18n.t("update.restoreIgnored"), null, "quiet", app::restoreIgnoredUpdates);
+
+        updates.getChildren().addAll(
+                line(app.i18n.t("update.auto"), toggle(app, "update.auto", true, () -> {})),
+                line(app.i18n.t("update.channel"), channel),
+                line(app.i18n.t("update.lastCheck"), lastCheckValue),
+                new FlowPane(8, 8, checkNowBtn, restoreIgnored)
+        );
+
         VBox data = panel(app.i18n.t("settings.localData"));
         ComboBox<Integer> limit = new ComboBox<>();
         limit.getItems().addAll(64, 128, 256, 512);
@@ -142,7 +188,7 @@ final class SettingsView {
                 }))
         );
 
-        page.getChildren().addAll(look, library, catalog, data, button(app.i18n.t("settings.exit"), null, "quiet", app::exit));
+        page.getChildren().addAll(look, library, updates, catalog, data, button(app.i18n.t("settings.exit"), null, "quiet", app::exit));
         return scroll(page);
     }
 
@@ -171,7 +217,7 @@ final class SettingsView {
                         out.write(app.i18n.t("settings.csv.sessionsHeader"));
                         out.newLine();
                         for (Session s : app.library.history(null))
-                            csv(out, s.gameId(), java.time.Instant.ofEpochSecond(s.start()), java.time.Instant.ofEpochSecond(s.end()), s.seconds());
+                            csv(out, s.gameId(), Instant.ofEpochSecond(s.start()), Instant.ofEpochSecond(s.end()), s.seconds());
                     }
                 }
             }
@@ -189,10 +235,27 @@ final class SettingsView {
     static Node about(MainWindow app) {
         VBox page = new VBox(18, label(app.i18n.t("about.title"), "page-title"));
         page.getStyleClass().add("page");
+
         VBox card = panel(app.i18n.t("app.name"));
         Label summary = label(app.i18n.t("about.summary"), "muted");
         summary.setWrapText(true);
-        card.getChildren().addAll(summary, label(app.i18n.t("about.tech", "0.1.0-alpha.1"), "muted"));
+        Button checkBtn = button(app.i18n.t("about.checkUpdates"), "update", "primary", null);
+        checkBtn.setOnAction(e -> {
+            checkBtn.setDisable(true);
+            checkBtn.setText(app.i18n.t("update.checking"));
+            app.checkUpdatesAsync(true, res -> {
+                checkBtn.setDisable(false);
+                checkBtn.setText(app.i18n.t("about.checkUpdates"));
+            });
+        });
+        FlowPane updateActions = new FlowPane(8, 8, checkBtn);
+        if (app.availableUpdate() != null) {
+            updateActions.getChildren().add(button(
+                    app.i18n.t("about.openUpdate", app.availableUpdate().tagName()),
+                    "external", "quiet", () -> app.showUpdateDialog(app.availableUpdate())
+            ));
+        }
+        card.getChildren().addAll(summary, label(app.i18n.t("about.tech", AppVersion.CURRENT), "muted"), updateActions);
         page.getChildren().add(card);
 
         VBox support = panel(app.i18n.t("about.detection"));
@@ -200,6 +263,15 @@ final class SettingsView {
         note.setWrapText(true);
         support.getChildren().add(note);
         page.getChildren().add(support);
+
+        VBox links = panel(app.i18n.t("about.links"));
+        FlowPane linkButtons = new FlowPane(8, 8,
+                button(app.i18n.t("about.link.releases"), "external", "quiet", () -> UpdateDialog.openUrl(AppVersion.REPO_RELEASES_WEB)),
+                button(app.i18n.t("about.link.privacy"), "external", "quiet", () -> UpdateDialog.openUrl(AppVersion.REPO_PRIVACY_URL)),
+                button(app.i18n.t("about.link.signing"), "external", "quiet", () -> UpdateDialog.openUrl(AppVersion.REPO_CODE_SIGNING_URL))
+        );
+        links.getChildren().add(linkButtons);
+        page.getChildren().add(links);
         return scroll(page);
     }
 
