@@ -1,5 +1,7 @@
 package br.com.gameshelf;
 
+import br.com.gameshelf.service.diagnostics.AppLogger;
+import br.com.gameshelf.service.diagnostics.DiagnosticsService;
 import br.com.gameshelf.service.i18n.LanguagePreference;
 import br.com.gameshelf.service.i18n.LocalizationService;
 import br.com.gameshelf.service.update.AppVersion;
@@ -38,6 +40,8 @@ public final class MainWindow {
     final Playtime tracker;
     final Artwork art;
     final LocalizationService i18n;
+    final AppLogger logger;
+    final DiagnosticsService diagnosticsService;
     final UpdateService updateService = new UpdateService();
     final GameActions actions;
     final BorderPane root = new BorderPane();
@@ -57,6 +61,7 @@ public final class MainWindow {
     private final List<Runnable> i18nUpdaters = new ArrayList<>();
 
     private ActivityView activity;
+    private DiagnosticsView diagnosticsView;
     private String page = "Todos os jogos", gameId;
     private Set<String> playing = Set.of();
     private boolean scanning, closing, monitorOk = true, checkingUpdates;
@@ -73,6 +78,9 @@ public final class MainWindow {
         this.tracker = new Playtime(library);
         this.art = new Artwork(data);
         this.art.limit(Integer.parseInt(library.setting("cacheMb", "256")));
+        this.logger = new AppLogger(data);
+        this.logger.info("App", "GameShelf initialized (v" + AppVersion.CURRENT + ")");
+        this.diagnosticsService = new DiagnosticsService(library, tracker, art, logger, PLATFORMS);
         this.status = label(i18n.t("status.preparing"), "muted");
         this.monitorLabel = label(i18n.t("monitor.active"), "monitor-label");
         this.scanStatus = i18n.t("status.localLibrary");
@@ -191,7 +199,8 @@ public final class MainWindow {
             if (g != null) {
                 double v = activity != null ? activity.getVvalue() : 0;
                 showDetails(g);
-                if (activity != null) Platform.runLater(() -> activity.setVvalue(v));
+                ActivityView target = activity;
+                if (target != null) Platform.runLater(() -> target.setVvalue(v));
                 return;
             }
         }
@@ -201,8 +210,16 @@ public final class MainWindow {
         } else if (page.equals("Estatísticas") && activity != null) {
             double v = activity.getVvalue();
             activity = new ActivityView(this, null);
+            ActivityView target = activity;
             root.setCenter(activity);
-            Platform.runLater(() -> activity.setVvalue(v));
+            Platform.runLater(() -> target.setVvalue(v));
+        } else if (page.equals("Diagnóstico") && diagnosticsView != null) {
+            double v = diagnosticsView.getVvalue();
+            diagnosticsView.dispose();
+            diagnosticsView = buildDiagnosticsView();
+            DiagnosticsView target = diagnosticsView;
+            root.setCenter(diagnosticsView);
+            Platform.runLater(() -> target.setVvalue(v));
         } else if (page.equals("Configurações") || page.equals("Sobre")) {
             double v = root.getCenter() instanceof ScrollPane sp ? sp.getVvalue() : 0;
             root.setCenter(page.equals("Configurações") ? SettingsView.build(this) : SettingsView.about(this));
@@ -315,6 +332,10 @@ public final class MainWindow {
     }
 
     void navigate(String name) {
+        if (diagnosticsView != null && !name.equals("Diagnóstico")) {
+            diagnosticsView.dispose();
+            diagnosticsView = null;
+        }
         Button prev = navigation.get(page);
         if (prev != null) prev.getStyleClass().remove("selected");
         page = name;
@@ -323,6 +344,10 @@ public final class MainWindow {
         Button next = navigation.get(page);
         if (next != null) next.getStyleClass().add("selected");
         switch (name) {
+            case "Diagnóstico" -> {
+                diagnosticsView = buildDiagnosticsView();
+                root.setCenter(diagnosticsView);
+            }
             case "Configurações" -> root.setCenter(SettingsView.build(this));
             case "Sobre" -> root.setCenter(SettingsView.about(this));
             case "Estatísticas" -> {
@@ -334,6 +359,22 @@ public final class MainWindow {
                 shelf.open(name);
             }
         }
+    }
+
+    private DiagnosticsView buildDiagnosticsView() {
+        return new DiagnosticsView(
+                stage,
+                diagnosticsService,
+                logger,
+                i18n,
+                () -> monitorOk,
+                () -> scanStatus,
+                () -> {
+                    String k = library.setting("gridDbKey", "");
+                    return k.isBlank() ? List.of() : List.of(k);
+                },
+                this::message
+        );
     }
 
     void details(Game g) {
@@ -411,6 +452,7 @@ public final class MainWindow {
 
         VBox bottom = new VBox(3);
         bottom.getStyleClass().add("side-bottom");
+        nav(bottom, "Diagnóstico", "diagnostics", () -> i18n.t("nav.diagnostics"), false);
         nav(bottom, "Configurações", "settings", () -> i18n.t("nav.settings"), false);
         nav(bottom, "Sobre", "info", () -> i18n.t("nav.about"), true);
 
@@ -553,8 +595,11 @@ public final class MainWindow {
                 lastDetectedCount = result.games().size();
                 lastScanWarnings = result.warnings();
                 lastScanError = null;
+                logger.info("Detector", "Library scan finished: " + lastDetectedCount + " detected");
+                for (String w : lastScanWarnings) logger.warn("Detector", w);
             } catch (Exception e) {
                 lastScanError = e.getMessage();
+                logger.error("Detector", "Library scan failed", e);
             } finally {
                 Platform.runLater(() -> {
                     scanning = false;
@@ -609,6 +654,7 @@ public final class MainWindow {
 
     void stop() throws Exception {
         closing = true;
+        if (diagnosticsView != null) diagnosticsView.dispose();
         tray.close();
         art.close();
         monitor.shutdownNow();

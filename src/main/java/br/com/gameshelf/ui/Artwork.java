@@ -91,5 +91,17 @@ public final class Artwork implements AutoCloseable {
         }
     }
     public void retry() { misses.clear();images.clear(); }
+    public Path cacheDirectory() { return cache; }
+    public int limitMb() { return limitMb; }
+    public synchronized long cacheSizeBytes() {
+        if (!Files.isDirectory(cache)) return 0L;
+        try (var entries = Files.walk(cache)) {
+            return entries.filter(Files::isRegularFile).mapToLong(p -> {
+                try { return Files.size(p); } catch (IOException e) { return 0L; }
+            }).sum();
+        } catch (IOException e) {
+            return 0L;
+        }
+    }
     public void close() { pool.shutdownNow(); }
 }

@@ -13,11 +13,17 @@ public final class Library {
     private final Map<String,Session> checkpoints = new HashMap<>();
     private final Map<String,String> preferences = new HashMap<>();
     private final GameDatabase database;
+    private volatile Instant lastSavedAt;
 
     public Library(Path legacy) throws IOException {
         database = new GameDatabase(legacy.resolveSibling("library.db"));
         database.load(games,sessions,settings,legacy);
     }
+    public Path databaseFile() { return database.file; }
+    public String schemaVersion() { return setting("migration.v1", "1").equals("1") ? "v1" : setting("migration.v1", "v1"); }
+    public String checkDatabaseIntegrity() { synchronized (database) { return database.checkIntegrity(); } }
+    public Instant lastSavedAt() { return lastSavedAt; }
+    public synchronized int sessionsCount() { return sessions.size(); }
     public synchronized List<Game> snapshot() { return List.copyOf(games.values()); }
     public synchronized Game get(String id) { return games.get(id); }
     public synchronized List<Session> history(String gameId) {
@@ -80,7 +86,7 @@ public final class Library {
                 history=Map.copyOf(checkpoints);config=Map.copyOf(preferences);
                 changed.clear();removed.clear();checkpoints.clear();preferences.clear();
             }
-            try {database.save(updates,deletes,history.values(),config);}
+            try {database.save(updates,deletes,history.values(),config);lastSavedAt=Instant.now();}
             catch(IOException e){
                 synchronized(this){
                     for(Game g:updates)if(games.containsKey(g.id()))changed.add(g.id());
