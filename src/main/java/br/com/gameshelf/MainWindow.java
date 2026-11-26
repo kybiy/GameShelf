@@ -2,6 +2,10 @@ package br.com.gameshelf;
 
 import br.com.gameshelf.service.i18n.LanguagePreference;
 import br.com.gameshelf.service.i18n.LocalizationService;
+import br.com.gameshelf.service.update.AppVersion;
+import br.com.gameshelf.service.update.ReleaseInfo;
+import br.com.gameshelf.service.update.UpdateChannel;
+import br.com.gameshelf.service.update.UpdateService;
 import br.com.gameshelf.ui.*;
 import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
@@ -12,11 +16,14 @@ import javafx.scene.*;
 import javafx.scene.control.*;
 import javafx.scene.image.WritableImage;
 import javafx.scene.layout.*;
+import javafx.scene.shape.Circle;
 import javafx.stage.*;
 import javafx.util.Duration;
 import java.nio.file.*;
+import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 import static br.com.gameshelf.ui.Ui.*;
 
@@ -31,6 +38,7 @@ public final class MainWindow {
     final Playtime tracker;
     final Artwork art;
     final LocalizationService i18n;
+    final UpdateService updateService = new UpdateService();
     final GameActions actions;
     final BorderPane root = new BorderPane();
     final DesktopTray tray = new DesktopTray();
@@ -44,17 +52,19 @@ public final class MainWindow {
     private final Label monitorLabel;
     private final LibraryView shelf;
     private final BooleanProperty compactMenu = new SimpleBooleanProperty();
+    private final BooleanProperty updateBadgeVisible = new SimpleBooleanProperty(false);
     private final Map<String, Button> navigation = new HashMap<>();
     private final List<Runnable> i18nUpdaters = new ArrayList<>();
 
     private ActivityView activity;
     private String page = "Todos os jogos", gameId;
     private Set<String> playing = Set.of();
-    private boolean scanning, closing, monitorOk = true;
+    private boolean scanning, closing, monitorOk = true, checkingUpdates;
     private String scanStatus;
     private int lastDetectedCount = -1;
     private List<String> lastScanWarnings = List.of();
     private String lastScanError;
+    private ReleaseInfo availableUpdate;
 
     MainWindow(Stage stage, Library library, Path data) {
         this.stage = stage;
@@ -144,6 +154,10 @@ public final class MainWindow {
         }, 5, 5, TimeUnit.SECONDS);
         if (flag("scanOnStart", true)) scan();
         else status.setText(scanStatus);
+
+        if (flag("update.auto", true)) {
+            monitor.schedule(() -> checkUpdatesAsync(false, null), 2, TimeUnit.SECONDS);
+        }
     }
 
     boolean flag(String key, boolean fallback) {
@@ -209,6 +223,86 @@ public final class MainWindow {
                     : String.join("  ·  ", lastScanWarnings);
         } else {
             scanStatus = i18n.t("status.localLibrary");
+        }
+    }
+
+    UpdateChannel updateChannel() {
+        return UpdateChannel.fromCode(library.setting("update.channel", ""), AppVersion.CURRENT);
+    }
+
+    ReleaseInfo availableUpdate() {
+        return availableUpdate;
+    }
+
+    void checkUpdatesAsync(boolean manual, Consumer<UpdateService.CheckResult> onFinished) {
+        if (closing || checkingUpdates) return;
+        checkingUpdates = true;
+        work(() -> {
+            UpdateService.CheckResult result;
+            try {
+                result = updateService.check(updateChannel(), library.setting("update.ignored", ""), manual);
+            } finally {
+                checkingUpdates = false;
+            }
+            Platform.runLater(() -> {
+                if (closing) return;
+                if (result.checkedAt() != null && (result.status() == UpdateService.Status.UP_TO_DATE
+                        || result.status() == UpdateService.Status.UPDATE_AVAILABLE)) {
+                    prefer("update.lastCheck", Long.toString(result.checkedAt().getEpochSecond()));
+                }
+                if (result.status() == UpdateService.Status.UPDATE_AVAILABLE && result.update().isPresent()) {
+                    availableUpdate = result.update().get();
+                    updateBadgeVisible.set(true);
+                    message(i18n.t("update.availableStatus", availableUpdate.tagName()));
+                    if (manual || stage.isShowing()) {
+                        showUpdateDialog(availableUpdate);
+                    }
+                } else if (result.status() == UpdateService.Status.UP_TO_DATE) {
+                    availableUpdate = null;
+                    updateBadgeVisible.set(false);
+                    if (manual) {
+                        actions.alert(Alert.AlertType.INFORMATION, i18n.t("update.section"),
+                                i18n.t("update.upToDate", "v" + AppVersion.CURRENT)).showAndWait();
+                    }
+                } else if (manual) {
+                    String key = result.status() == UpdateService.Status.RATE_LIMITED ? "update.rateLimited" : "update.error";
+                    actions.alert(Alert.AlertType.WARNING, i18n.t("update.section"), i18n.t(key)).showAndWait();
+                }
+                if (onFinished != null) onFinished.accept(result);
+            });
+        });
+    }
+
+    void showUpdateDialog(ReleaseInfo release) {
+        if (release == null) return;
+        UpdateDialog.show(
+                stage,
+                root.getScene().getStylesheets(),
+                flag("light", false),
+                root.getStyle(),
+                flag("animations", true),
+                i18n,
+                release,
+                ignoredVer -> {
+                    prefer("update.ignored", ignoredVer);
+                    availableUpdate = null;
+                    updateBadgeVisible.set(false);
+                }
+        );
+    }
+
+    void restoreIgnoredUpdates() {
+        prefer("update.ignored", "");
+        message(i18n.t("update.ignoredRestored"));
+    }
+
+    Instant lastUpdateCheckInstant() {
+        String raw = library.setting("update.lastCheck", "");
+        if (raw.isBlank()) return null;
+        try {
+            return Instant.ofEpochSecond(Long.parseLong(raw));
+        } catch (NumberFormatException e) {
+            return null;
         }
     }
 
@@ -300,14 +394,14 @@ public final class MainWindow {
         VBox top = new VBox(brand);
 
         group(links, "nav.section.library");
-        nav(links, "Todos os jogos", "library", () -> i18n.t("nav.allGames"));
-        nav(links, "Favoritos", "heart", () -> i18n.t("nav.favorites"));
-        nav(links, "Recentes", "clock", () -> i18n.t("nav.recent"));
-        nav(links, "Estatísticas", "chart", () -> i18n.t("nav.stats"));
+        nav(links, "Todos os jogos", "library", () -> i18n.t("nav.allGames"), false);
+        nav(links, "Favoritos", "heart", () -> i18n.t("nav.favorites"), false);
+        nav(links, "Recentes", "clock", () -> i18n.t("nav.recent"), false);
+        nav(links, "Estatísticas", "chart", () -> i18n.t("nav.stats"), false);
 
         group(links, "nav.section.platforms");
         for (String p : PLATFORMS) {
-            nav(links, p, p.equals("Local") ? "folder" : "platform", () -> i18n.platformName(p));
+            nav(links, p, p.equals("Local") ? "folder" : "platform", () -> i18n.platformName(p), false);
         }
 
         ScrollPane scrolling = new ScrollPane(links);
@@ -317,8 +411,8 @@ public final class MainWindow {
 
         VBox bottom = new VBox(3);
         bottom.getStyleClass().add("side-bottom");
-        nav(bottom, "Configurações", "settings", () -> i18n.t("nav.settings"));
-        nav(bottom, "Sobre", "info", () -> i18n.t("nav.about"));
+        nav(bottom, "Configurações", "settings", () -> i18n.t("nav.settings"), false);
+        nav(bottom, "Sobre", "info", () -> i18n.t("nav.about"), true);
 
         StringProperty collapseText = new SimpleStringProperty(i18n.t("nav.collapse"));
         StringProperty expandText = new SimpleStringProperty(i18n.t("nav.expand"));
@@ -360,7 +454,7 @@ public final class MainWindow {
         box.getChildren().addAll(separator, title);
     }
 
-    private void nav(VBox box, String name, String glyph, Supplier<String> titleSupplier) {
+    private void nav(VBox box, String name, String glyph, Supplier<String> titleSupplier, boolean withUpdateDot) {
         String initialTitle = titleSupplier.get();
         Button b = button(initialTitle, glyph, "nav", () -> {
             navigate(name);
@@ -379,6 +473,7 @@ public final class MainWindow {
                 b.setScaleY(1);
             }
         });
+        Node graphicNode;
         if (glyph.equals("platform")) {
             String code = switch (name) {
                 case "Epic Games" -> "EP";
@@ -391,8 +486,20 @@ public final class MainWindow {
             };
             Label monogram = label(code, "platform-mark");
             monogram.getStyleClass().add("store-" + PLATFORMS.indexOf(name));
-            b.setGraphic(monogram);
+            graphicNode = monogram;
+        } else {
+            graphicNode = b.getGraphic();
         }
+        if (withUpdateDot && graphicNode != null) {
+            Circle dot = new Circle(3.5);
+            dot.getStyleClass().add("update-dot");
+            dot.visibleProperty().bind(updateBadgeVisible);
+            dot.managedProperty().bind(updateBadgeVisible);
+            StackPane badged = new StackPane(graphicNode, dot);
+            StackPane.setAlignment(dot, Pos.TOP_RIGHT);
+            graphicNode = badged;
+        }
+        b.setGraphic(graphicNode);
         navigation.put(name, b);
 
         StringProperty titleProp = new SimpleStringProperty(initialTitle);
