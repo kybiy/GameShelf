@@ -102,3 +102,31 @@
 .tooltip { -fx-background-color: #282e40; -fx-text-fill: white; -fx-background-radius: 5; }
 .error { -fx-text-fill: #ed888f; }
 .button.nav:armed { -fx-background-color: derive(-shelf-accent,-22%); -fx-text-fill: #10131c; }
+.setting-name { -fx-min-width: 140; }
+.badge-pill { -fx-background-color: -shelf-field; -fx-text-fill: -shelf-ink; -fx-background-radius: 12; -fx-padding: 3 10; -fx-font-size: 11px; -fx-font-weight: bold; }
+.badge-alpha { -fx-background-color: #3f3220; -fx-text-fill: #f5c372; }
+.badge-beta { -fx-background-color: #26364d; -fx-text-fill: #8ec5ff; }
+.badge-stable { -fx-background-color: #163a2f; -fx-text-fill: #9ce3bd; }
+.root.light .badge-alpha, .dialog-pane.light .badge-alpha { -fx-background-color: #f7e6c4; -fx-text-fill: #7d4e00; }
+.root.light .badge-beta, .dialog-pane.light .badge-beta { -fx-background-color: #dce9fa; -fx-text-fill: #164f8c; }
+.root.light .badge-stable, .dialog-pane.light .badge-stable { -fx-background-color: #d6f3e4; -fx-text-fill: #166544; }
+.update-dot { -fx-fill: -shelf-accent; }
+.status-dot { -fx-min-width: 9; -fx-min-height: 9; -fx-max-width: 9; -fx-max-height: 9; -fx-background-radius: 9; }
+.status-green { -fx-background-color: #5cd69a; }
+.status-yellow { -fx-background-color: #f4c15d; }
+.status-red { -fx-background-color: #ed7c84; }
+.status-gray { -fx-background-color: #798196; }
+.status-text-green { -fx-text-fill: #71d6a6; }
+.status-text-yellow { -fx-text-fill: #f4c15d; }
+.status-text-red { -fx-text-fill: #ed888f; }
+.root.light .status-text-green { -fx-text-fill: #187752; }
+.root.light .status-text-yellow { -fx-text-fill: #946200; }
+.root.light .status-text-red { -fx-text-fill: #b8303b; }
+.mono { -fx-font-family: "Consolas", "Courier New", monospace; -fx-font-size: 12px; }
+.log-box { -fx-background-color: -shelf-bg; -fx-border-color: -shelf-line; -fx-border-radius: 8; -fx-background-radius: 8; -fx-padding: 6; }
+.update-hero-icon { -fx-background-color: derive(-shelf-accent,-45%); -fx-background-radius: 12; -fx-min-width: 44; -fx-min-height: 44; -fx-max-width: 44; -fx-max-height: 44; }
+.update-hero-icon .glyph { -fx-stroke: -shelf-accent; -fx-stroke-width: 2.1; }
+.root.light .update-hero-icon, .dialog-pane.light .update-hero-icon { -fx-background-color: derive(-shelf-accent,65%); }
+.root.light .update-hero-icon .glyph, .dialog-pane.light .update-hero-icon .glyph { -fx-stroke: #1b1e32; }
+.subtle-link { -fx-background-color: transparent; -fx-text-fill: -shelf-muted; -fx-underline: true; }
+.subtle-link:hover { -fx-background-color: transparent; -fx-text-fill: -shelf-ink; }
