@@ -23,7 +23,8 @@ public final class Detector {
         try {out.addAll(riot());}catch(Exception e){warn.accept("Riot: "+e.getMessage());}
         Map<String,Game> unique=new LinkedHashMap<>();out.forEach(g->unique.putIfAbsent(g.id(),g));return new Result(List.copyOf(unique.values()),List.copyOf(errors));
     }
-    static String env(String key,String suffix){String base=System.getenv(key);return base==null||base.isBlank()?Path.of(System.getProperty("user.home"),".gameshelf-nonexistent",key,suffix).toString():Path.of(base,suffix).toString();}
+    public static String env(String key,String suffix){String base=System.getenv(key);return base==null||base.isBlank()?Path.of(System.getProperty("user.home"),".gameshelf-nonexistent",key,suffix).toString():Path.of(base,suffix).toString();}
+    public static String registryValue(String key,String name){if(!System.getProperty("os.name").toLowerCase(Locale.ROOT).contains("windows"))return "";try{Process p=new ProcessBuilder("reg","query",key,"/v",name).redirectErrorStream(true).start();if(!p.waitFor(3,TimeUnit.SECONDS)){p.destroyForcibly();return "";}String output=new String(p.getInputStream().readAllBytes(),java.nio.charset.Charset.defaultCharset());for(String line:output.split("\\R")){String[] parts=line.trim().split("\\s{2,}",3);if(parts.length==3&&parts[0].equalsIgnoreCase(name))return parts[2].trim();}}catch(Exception ignored){}return "";}
     private static void add(Set<Path> roots,String value){if(value!=null&&!value.isBlank())try{roots.add(Path.of(value).toAbsolutePath().normalize());}catch(InvalidPathException ignored){}}
     static List<Game> steam(Path root,Consumer<String> warn) throws IOException {
         Set<Path> libs=new LinkedHashSet<>();libs.add(root);
@@ -67,5 +68,4 @@ public final class Detector {
         if(!Files.isRegularFile(client))continue;
         for(String[] game:new String[][]{{"league_of_legends","League of Legends","League of Legends/Game/League of Legends.exe"},{"valorant","VALORANT","VALORANT/live/ShooterGame/Binaries/Win64/VALORANT-Win64-Shipping.exe"}}){Path exe=base.resolve(game[2]);if(Files.isRegularFile(exe))list.add(new Game("riot:"+game[0],game[1],"Riot Games",base.resolve(game[2].split("/")[0]).toString(),exe.toString(),"",true,"",0,false));}
     }return list;}
-    private static String registryValue(String key,String name){if(!System.getProperty("os.name").toLowerCase(Locale.ROOT).contains("windows"))return "";try{Process p=new ProcessBuilder("reg","query",key,"/v",name).redirectErrorStream(true).start();if(!p.waitFor(3,TimeUnit.SECONDS)){p.destroyForcibly();return "";}String output=new String(p.getInputStream().readAllBytes(),java.nio.charset.Charset.defaultCharset());for(String line:output.split("\\R")){String[] parts=line.trim().split("\\s{2,}",3);if(parts.length==3&&parts[0].equalsIgnoreCase(name))return parts[2].trim();}}catch(Exception ignored){}return "";}
 }

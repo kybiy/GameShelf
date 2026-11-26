@@ -121,7 +121,7 @@ Copy-Item (Join-Path $LibDir "*.jar") -Destination $InputLibDir
 $RuntimeDir = Join-Path $RepoRoot "target\runtime"
 if (Test-Path $RuntimeDir) { Remove-Item $RuntimeDir -Recurse -Force }
 Write-Host "`n[2/5] Gerando runtime Java otimizado via jlink..." -ForegroundColor Yellow
-$Modules = "java.base,java.desktop,java.logging,java.naming,java.net.http,java.sql,java.xml,jdk.crypto.ec,jdk.unsupported"
+$Modules = "java.base,java.desktop,java.logging,java.management,java.naming,java.net.http,java.sql,java.xml,jdk.crypto.ec,jdk.management,jdk.unsupported"
 & jlink --add-modules $Modules --strip-debug --no-header-files --no-man-pages --compress=zip-6 --output $RuntimeDir
 if ($LASTEXITCODE -ne 0) {
     Fail "Falha ao executar jlink (código $LASTEXITCODE)."

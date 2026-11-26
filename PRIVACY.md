@@ -19,18 +19,23 @@ All application data is stored locally in `%LOCALAPPDATA%\GameShelf` (or `~/.gam
   - **Session history (`session` table)**: session ID, game ID, start timestamp, end timestamp, and session duration in seconds.
   - **Application settings (`setting` table)**: UI preferences (theme, accent color, cover size, animations, sidebar state, initial search, tray behavior, image cache limit), date-added timestamps (`added.<gameId>`), custom artwork paths/URLs (`cover.<gameId>`, `banner.<gameId>`), and your optional SteamGridDB API key (`gridDbKey`).
 - **Artwork cache (`cache/` folder)**: locally cached `.jpg` cover and banner images downloaded from Steam or SteamGridDB (default size limit: 256 MB, configurable in Settings).
+- **Local diagnostic logs (`logs/` folder)**: rotating log files (`gameshelf.log`, capped and rotated automatically) containing sanitized service events (app initialization, library scans, warnings, and errors). Personal paths and credentials are redacted before writing.
 - **Runtime files**: `instance.lock` (single-instance file lock) and, if present from an older version, the legacy `library.properties` file.
 
-GameShelf also reads local game platform manifests (`libraryfolders.vdf`, `appmanifest_*.acf`, Epic `.item` manifests, Roblox versions, Riot Games default directories, and Windows Registry Steam paths) and monitors running Windows process names/paths locally in memory solely to detect installed games and track playtime.
+GameShelf also reads local game platform manifests (`libraryfolders.vdf`, `appmanifest_*.acf`, Epic `.item` manifests, Roblox versions, Riot Games default directories, and Windows Registry Steam paths) and inspects running Windows process names/paths, JVM/process RAM & CPU metrics, and SQLite integrity locally in memory for playtime tracking and the **Diagnostics** panel.
 
 ### 4. External Network Connections
 GameShelf only makes outbound HTTPS requests in the following cases:
-1. **Steam CDN (`https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/<appid>/...`)**:
+1. **GitHub Releases API (`https://api.github.com/repos/kybiy/GameShelf/releases`)**:
+   - Queried on startup (when automatic checks are enabled) and when you click **Check now** to detect newer public releases according to your selected channel. No authentication token or personal data is sent; release downloads open manually in your browser.
+2. **Steam CDN (`https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/<appid>/...`)**:
    - Automatically fetches cover (`library_600x900.jpg`) and banner (`library_hero.jpg`) images in the background for detected Steam games, using only the public numeric Steam AppID. No personal data or authentication is sent.
-2. **SteamGridDB API & CDN (`https://www.steamgriddb.com/api/v2/...` and `https://cdn2.steamgriddb.com/...`)** *(strictly optional)*:
+3. **SteamGridDB API & CDN (`https://www.steamgriddb.com/api/v2/...` and `https://cdn2.steamgriddb.com/...`)** *(strictly optional)*:
    - Contacted **only** when you manually enter your own personal SteamGridDB API key in **Configurações → SteamGridDB** and explicitly trigger **Pesquisar no SteamGridDB** for a game. Sends your `Authorization: Bearer <key>` header and the game search query to SteamGridDB, and downloads the selected static image from `cdn2.steamgriddb.com`.
-3. **Roblox Web Catalog (`https://www.roblox.com/games`)**:
+4. **Roblox Web Catalog (`https://www.roblox.com/games`)**:
    - Opened in your default web browser **only** when you explicitly click **Jogar** on a detected Roblox entry.
+
+Diagnostic reports generated in the **Diagnostics** panel are **never** sent automatically to GitHub or any server. Export or copy is always manual after a sanitization preview (which removes Windows usernames, user profile paths, API keys, tokens, process arguments, and full game history).
 
 ### 5. API Key Storage
 Your optional SteamGridDB API key (`gridDbKey`) is stored locally in plain text inside the `setting` table of `%LOCALAPPDATA%\GameShelf\library.db`. If you export a SQLite backup via **Configurações → Dados locais**, the `setting` table (including `gridDbKey`) is included in that backup file.
@@ -40,6 +45,7 @@ You have full control over your local data and can remove it at any time:
 - **Delete everything**: close GameShelf completely (**Sair do GameShelf** in the system tray) and delete the `%LOCALAPPDATA%\GameShelf` folder (or `~/.gameshelf`).
 - **Delete only your SteamGridDB API key**: open **Configurações → SteamGridDB**, clear the key field, and save.
 - **Delete cached artwork**: delete the `%LOCALAPPDATA%\GameShelf\cache` folder while GameShelf is closed.
+- **Delete diagnostic logs and exported reports**: delete the `%LOCALAPPDATA%\GameShelf\logs` folder (accessible via **Diagnostics → Open logs folder**) and any `.txt` or `.json` report files you saved manually.
 - **Delete manual backups/exports**: delete any SQLite backup or CSV export files you previously saved to disk.
 
 ---
@@ -59,18 +65,23 @@ Todos os dados do aplicativo ficam gravados localmente em `%LOCALAPPDATA%\GameSh
   - **Histórico de sessões (tabela `session`)**: identificador da sessão, identificador do jogo, instante de início, instante de término e duração em segundos.
   - **Configurações (tabela `setting`)**: preferências da interface (tema, cor de destaque, tamanho das capas, animações, menu recolhido, busca inicial, comportamento de bandeja e limite do cache de imagens), data de adição (`added.<gameId>`), caminhos/URLs personalizados de capa e banner (`cover.<gameId>`, `banner.<gameId>`) e a chave opcional do SteamGridDB (`gridDbKey`).
 - **Cache de imagens (pasta `cache/`)**: arquivos `.jpg` de capas e banners baixados da Steam ou do SteamGridDB (limite padrão de 256 MB, ajustável em Configurações).
+- **Logs locais de diagnóstico (pasta `logs/`)**: arquivos rotativos (`gameshelf.log`, com rotação automática e limite de tamanho) contendo eventos sanitizados dos serviços (inicialização, varreduras, avisos e erros). Caminhos pessoais e credenciais são ocultados antes da gravação.
 - **Arquivos auxiliares**: `instance.lock` (trava de instância única) e, quando existente de versões anteriores, o arquivo legado `library.properties`.
 
-O aplicativo também lê manifestos locais das plataformas de jogos (`libraryfolders.vdf`, `appmanifest_*.acf`, manifestos `.item` da Epic, pastas de versão do Roblox, pastas padrão da Riot Games e caminhos da Steam no Registro do Windows) e consulta processos em execução localmente em memória apenas para detectar jogos instalados e contabilizar o tempo de jogo.
+O aplicativo também lê manifestos locais das plataformas de jogos (`libraryfolders.vdf`, `appmanifest_*.acf`, manifestos `.item` da Epic, pastas de versão do Roblox, pastas padrão da Riot Games e caminhos da Steam no Registro do Windows) e coleta localmente em memória processos em execução, métricas de RAM/CPU da JVM e do processo e integridade do SQLite para contabilizar o tempo de jogo e alimentar o painel de **Diagnóstico**.
 
 ### 4. Conexões externas
 O GameShelf realiza conexões HTTPS externas somente nas seguintes situações:
-1. **CDN da Steam (`https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/<appid>/...`)**:
+1. **API do GitHub Releases (`https://api.github.com/repos/kybiy/GameShelf/releases`)**:
+   - Consultada ao iniciar (quando a verificação automática está ativa) e quando você clica em **Verificar agora**, comparando versões públicas conforme o canal escolhido. Nenhum token de autenticação ou dado pessoal é enviado; o download de atualizações é aberto manualmente no seu navegador.
+2. **CDN da Steam (`https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/<appid>/...`)**:
    - Busca automaticamente em segundo plano as imagens de capa (`library_600x900.jpg`) e banner (`library_hero.jpg`) para jogos Steam detectados, enviando apenas o AppID numérico público. Nenhuma informação pessoal ou autenticação é enviada.
-2. **API e CDN do SteamGridDB (`https://www.steamgriddb.com/api/v2/...` e `https://cdn2.steamgriddb.com/...`)** *(estritamente opcional)*:
+3. **API e CDN do SteamGridDB (`https://www.steamgriddb.com/api/v2/...` e `https://cdn2.steamgriddb.com/...`)** *(estritamente opcional)*:
    - Acionada **somente** quando você cadastra sua chave pessoal em **Configurações → SteamGridDB** e executa manualmente **Pesquisar no SteamGridDB** em um jogo. Envia o cabeçalho `Authorization: Bearer <chave>` e o termo de pesquisa do jogo, e baixa a imagem estática selecionada de `cdn2.steamgriddb.com`.
-3. **Catálogo web do Roblox (`https://www.roblox.com/games`)**:
+4. **Catálogo web do Roblox (`https://www.roblox.com/games`)**:
    - Aberto no seu navegador padrão **somente** quando você clica em **Jogar** em uma entrada detectada do Roblox.
+
+Os relatórios gerados no painel de **Diagnóstico** **nunca** são enviados automaticamente para o GitHub ou qualquer servidor. A cópia ou exportação é sempre manual após prévia sanitizada (que remove nomes de usuário do Windows, caminhos pessoais, chaves de API, tokens, argumentos de processo e o histórico completo de jogos).
 
 ### 5. Armazenamento de chaves de API
 Sua chave opcional do SteamGridDB (`gridDbKey`) é salva localmente em texto simples na tabela `setting` do arquivo `%LOCALAPPDATA%\GameShelf\library.db`. Caso você gere um backup SQLite manual em **Configurações → Dados locais**, a tabela `setting` (incluindo `gridDbKey`) também estará presente nesse arquivo de backup.
@@ -80,4 +91,5 @@ Você pode remover seus dados locais a qualquer momento:
 - **Excluir todos os dados**: encerre completamente o GameShelf (**Sair do GameShelf** na bandeja do sistema) e exclua a pasta `%LOCALAPPDATA%\GameShelf` (ou `~/.gameshelf`).
 - **Excluir apenas a chave do SteamGridDB**: abra **Configurações → SteamGridDB**, limpe o campo da chave e salve.
 - **Excluir apenas o cache de imagens**: exclua a pasta `%LOCALAPPDATA%\GameShelf\cache` com o aplicativo fechado.
+- **Excluir logs de diagnóstico e relatórios exportados**: exclua a pasta `%LOCALAPPDATA%\GameShelf\logs` (acessível em **Diagnóstico → Abrir pasta de logs**) e quaisquer arquivos `.txt` ou `.json` salvos manualmente.
 - **Excluir backups/exportações**: remova manualmente quaisquer backups `.db` ou exportações `.csv` que você tenha salvo em outras pastas.

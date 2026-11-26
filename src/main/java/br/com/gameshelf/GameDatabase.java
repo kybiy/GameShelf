@@ -15,6 +15,15 @@ final class GameDatabase {
     Connection connect() throws SQLException {
         return DriverManager.getConnection("jdbc:sqlite:" + file.toAbsolutePath());
     }
+    String checkIntegrity() {
+        try (Connection c = connect(); Statement sql = c.createStatement(); ResultSet rs = sql.executeQuery("PRAGMA quick_check")) {
+            List<String> rows = new ArrayList<>();
+            while (rs.next()) rows.add(rs.getString(1));
+            return rows.isEmpty() ? "error" : String.join("; ", rows);
+        } catch (SQLException e) {
+            return "error: " + e.getMessage();
+        }
+    }
     void load(Map<String, Game> games, Map<String, Session> sessions, Map<String, String> settings,
               Path legacy) throws IOException {
         try (Connection c = connect(); Statement sql = c.createStatement()) {

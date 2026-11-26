@@ -1,30 +1,52 @@
 package br.com.gameshelf;
 
+import br.com.gameshelf.service.i18n.LanguagePreference;
+import br.com.gameshelf.service.i18n.LocalizationService;
 import java.awt.Desktop;
 import java.net.URI;
 import java.nio.file.*;
 import java.io.IOException;
 
 public final class Launcher {
+    private static final LocalizationService DEFAULT_I18N = new LocalizationService(LanguagePreference.SYSTEM);
+
     public static void open(Game game) throws IOException {
-        open(game,"","");
+        open(game, "", "", DEFAULT_I18N);
     }
-    public static void open(Game game,String arguments,String workingDirectory) throws IOException {
-        if(!game.installed())throw new IOException("O jogo não está instalado. Atualize a biblioteca.");
-        if(!game.launchUri().isBlank()){
-            URI uri=URI.create(game.launchUri());if(!java.util.Set.of("steam","com.epicgames.launcher","https").contains(uri.getScheme()))throw new IOException("Protocolo não permitido");
-            if(!Desktop.isDesktopSupported()||!Desktop.getDesktop().isSupported(Desktop.Action.BROWSE))throw new IOException("O sistema não oferece abertura de links");
-            Desktop.getDesktop().browse(uri);return;
+
+    public static void open(Game game, String arguments, String workingDirectory) throws IOException {
+        open(game, arguments, workingDirectory, DEFAULT_I18N);
+    }
+
+    public static void open(Game game, String arguments, String workingDirectory, LocalizationService i18n) throws IOException {
+        LocalizationService loc = i18n == null ? DEFAULT_I18N : i18n;
+        if (!game.installed()) throw new IOException(loc.t("launcher.err.notInstalled"));
+        if (!game.launchUri().isBlank()) {
+            URI uri = URI.create(game.launchUri());
+            if (!java.util.Set.of("steam", "com.epicgames.launcher", "https").contains(uri.getScheme()))
+                throw new IOException(loc.t("launcher.err.protocol"));
+            if (!Desktop.isDesktopSupported() || !Desktop.getDesktop().isSupported(Desktop.Action.BROWSE))
+                throw new IOException(loc.t("launcher.err.noBrowse"));
+            Desktop.getDesktop().browse(uri);
+            return;
         }
-        if(!game.manual()&&game.platform().equals("Riot Games")){
-            Path client=Path.of(game.folder()).getParent().resolve("Riot Client/RiotClientServices.exe");String product=game.id().substring("riot:".length());
-            new ProcessBuilder(client.toString(),"--launch-product="+product,"--launch-patchline=live").directory(client.getParent().toFile()).start();return;
+        if (!game.manual() && game.platform().equals("Riot Games")) {
+            Path client = Path.of(game.folder()).getParent().resolve("Riot Client/RiotClientServices.exe");
+            String product = game.id().substring("riot:".length());
+            new ProcessBuilder(client.toString(), "--launch-product=" + product, "--launch-patchline=live")
+                    .directory(client.getParent().toFile()).start();
+            return;
         }
-        Path exe=Path.of(game.executable());if(!Files.isRegularFile(exe))throw new IOException("Executável não encontrado");
-        if(exe.toString().toLowerCase(java.util.Locale.ROOT).endsWith(".lnk")){Desktop.getDesktop().open(exe.toFile());return;}
-        var command=new java.util.ArrayList<String>();command.add(exe.toString());
-        arguments.lines().filter(line->!line.isEmpty()).forEach(command::add);
-        Path cwd=workingDirectory.isBlank()?exe.getParent():Path.of(workingDirectory);
+        Path exe = Path.of(game.executable());
+        if (!Files.isRegularFile(exe)) throw new IOException(loc.t("launcher.err.exeMissing"));
+        if (exe.toString().toLowerCase(java.util.Locale.ROOT).endsWith(".lnk")) {
+            Desktop.getDesktop().open(exe.toFile());
+            return;
+        }
+        var command = new java.util.ArrayList<String>();
+        command.add(exe.toString());
+        arguments.lines().filter(line -> !line.isEmpty()).forEach(command::add);
+        Path cwd = workingDirectory.isBlank() ? exe.getParent() : Path.of(workingDirectory);
         new ProcessBuilder(command).directory(cwd.toFile()).start();
     }
 }
