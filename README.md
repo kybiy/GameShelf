@@ -13,7 +13,7 @@ Baixe a versão mais recente em **[GitHub Releases](https://github.com/kybiy/Gam
 
 Seus jogos, horas, favoritos, configurações e banco de dados ficam salvos separadamente em `%LOCALAPPDATA%\GameShelf` e são preservados ao atualizar o aplicativo.
 
-> **Aviso do Windows SmartScreen:** os executáveis desta versão Alpha ainda não possuem assinatura digital. Ao abrir o instalador ou `GameShelf.exe` pela primeira vez, o Windows Defender SmartScreen pode exibir um aviso; clique em **Mais informações** e depois em **Executar assim mesmo** se desejar prosseguir.
+> **Aviso do Windows SmartScreen:** os executáveis desta versão Alpha ainda não possuem assinatura digital (a solicitação de assinatura gratuita pela SignPath Foundation está **pendente de aprovação** — veja [CODE_SIGNING.md](CODE_SIGNING.md)). Ao abrir o instalador ou `GameShelf.exe` pela primeira vez, o Windows Defender SmartScreen pode exibir um aviso; clique em **Mais informações** e depois em **Executar assim mesmo** se desejar prosseguir. Consulte também a [Política de Privacidade (PRIVACY.md)](PRIVACY.md).
 
 ## Executar pelo código-fonte
 
@@ -139,10 +139,12 @@ Para gerar uma versão com sufixo de pré-lançamento (como `0.1.0-alpha.1`), in
 powershell -ExecutionPolicy Bypass -File .\build-windows.ps1 -ReleaseVersion "0.1.0-alpha.1"
 ```
 
-## Contribuição, feedback e segurança
+## Contribuição, privacidade e segurança
 
 - **Reportar bugs ou enviar feedback**: abra uma issue em [GitHub Issues](https://github.com/kybiy/GameShelf/issues) usando os modelos disponíveis. Nunca anexe seu `library.db` pessoal, chaves do SteamGridDB ou logs com informações sensíveis.
 - **Contribuir com código**: leia o guia em [CONTRIBUTING.md](CONTRIBUTING.md) para entender o fluxo de branches (`main`, `develop`, `feat/*`, `fix/*`, `refactor/*`, `docs/*`), execução de testes e abertura de Pull Requests.
+- **Privacidade**: consulte [PRIVACY.md](PRIVACY.md) para detalhes sobre armazenamento local, conexões externas e exclusão de dados.
+- **Assinatura de código**: consulte [CODE_SIGNING.md](CODE_SIGNING.md) (solicitação à SignPath Foundation pendente de aprovação).
 - **Vulnerabilidades**: consulte [SECURITY.md](SECURITY.md).
 
 ## Licença
